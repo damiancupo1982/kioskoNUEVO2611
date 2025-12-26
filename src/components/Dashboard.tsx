@@ -142,7 +142,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
               <div className="text-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
                 <p className="text-xs text-slate-500 font-medium mb-0.5">Hora Local</p>
                 <p className="text-lg font-bold text-slate-800 tabular-nums">
-                  {currentTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  {currentTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
               <div className="text-right">
