@@ -181,7 +181,7 @@ export default function Ventas({ shift }: VentasProps) {
       payments: payments,
     };
 
-    const { error: saleError } = await supabase.from('sales').insert([saleData]);
+    const { data: saleResult, error: saleError } = await supabase.from('sales').insert([saleData]).select().single();
     if (saleError) {
       console.error('Error insertando venta:', saleError);
       alert(`Error al registrar la venta: ${saleError.message}`);
@@ -202,6 +202,25 @@ export default function Ventas({ shift }: VentasProps) {
         }
       }
     }
+
+    // Registrar movimientos de inventario
+    const inventoryMovements = cart.map((item) => {
+      const prod = products.find((p) => p.id === item.product_id);
+      return {
+        product_id: item.product_id,
+        product_name: item.product_name,
+        category: prod?.category || '',
+        movement_type: 'sale',
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_amount: item.subtotal,
+        sale_number: saleData.sale_number,
+        sale_id: saleResult?.id,
+        description: `Venta ${saleData.sale_number}${customerName.trim() ? ` - ${customerName.trim()}` : ''}`
+      };
+    });
+
+    await supabase.from('inventory_movements').insert(inventoryMovements);
 
     // Movimientos de caja: uno por método
     const cashRows = payments.map((p) => ({
