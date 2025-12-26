@@ -78,6 +78,7 @@ export default function Reportes() {
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -87,6 +88,7 @@ export default function Reportes() {
   const formatTime = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleTimeString('es-AR', {
+      timeZone: 'America/Argentina/Buenos_Aires',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -341,7 +343,8 @@ export default function Reportes() {
               : 'Todo'
           }</p>
           <p><strong>Fecha de emisión:</strong> ${new Date().toLocaleString(
-            'es-AR'
+            'es-AR',
+            { timeZone: 'America/Argentina/Buenos_Aires' }
           )}</p>
           <table>
             <thead>
@@ -367,7 +370,7 @@ export default function Reportes() {
                     <td>${sale.sale_number}</td>
                     <td>${new Date(
                       sale.created_at
-                    ).toLocaleString('es-AR')}</td>
+                    ).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</td>
                     <td>${sale.user_name}</td>
                     <td>${itemCount}</td>
                     <td>${sale.payment_method}</td>
@@ -432,7 +435,7 @@ export default function Reportes() {
             <p><strong>Ticket:</strong> ${sale.sale_number}</p>
             <p><strong>Fecha:</strong> ${new Date(
               sale.created_at
-            ).toLocaleString('es-AR')}</p>
+            ).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}</p>
             <p><strong>Vendedor:</strong> ${sale.user_name}</p>
             <p><strong>Pago:</strong> ${sale.payment_method}</p>
           </div>
@@ -639,7 +642,9 @@ export default function Reportes() {
                           {sale.sale_number}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                          {new Date(sale.created_at).toLocaleString('es-AR')}
+                          {new Date(sale.created_at).toLocaleString('es-AR', {
+                            timeZone: 'America/Argentina/Buenos_Aires'
+                          })}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                           {sale.user_name}
@@ -695,7 +700,9 @@ export default function Reportes() {
                 <div>
                   <p className="text-sm text-slate-600">Fecha</p>
                   <p className="font-medium">
-                    {new Date(selectedSale.created_at).toLocaleString('es-AR')}
+                    {new Date(selectedSale.created_at).toLocaleString('es-AR', {
+                      timeZone: 'America/Argentina/Buenos_Aires'
+                    })}
                   </p>
                 </div>
                 <div>

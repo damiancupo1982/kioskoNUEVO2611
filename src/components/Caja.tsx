@@ -136,11 +136,15 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
             <div className="flex items-center gap-4 text-slate-200">
               <span className="flex items-center gap-2">
                 <Calendar size={16} />
-                {new Date(shift.start_date).toLocaleDateString('es-AR')}
+                {new Date(shift.start_date).toLocaleDateString('es-AR', {
+                  timeZone: 'America/Argentina/Buenos_Aires'
+                })}
               </span>
               <span className="flex items-center gap-2">
                 <Clock size={16} />
-                {new Date(shift.start_date).toLocaleTimeString('es-AR')}
+                {new Date(shift.start_date).toLocaleTimeString('es-AR', {
+                  timeZone: 'America/Argentina/Buenos_Aires'
+                })}
               </span>
             </div>
             <p className="text-lg">
@@ -255,7 +259,9 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
             {transactions.map((t) => (
               <tr key={t.id} className="border-t border-slate-200 hover:bg-slate-50">
                 <td className="px-6 py-4 text-sm text-slate-700">
-                  {new Date(t.created_at).toLocaleString('es-AR')}
+                  {new Date(t.created_at).toLocaleString('es-AR', {
+                    timeZone: 'America/Argentina/Buenos_Aires'
+                  })}
                 </td>
                 <td className="px-6 py-4">
                   {t.type === 'income' ? (
@@ -406,7 +412,9 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
                 <div className="flex justify-between">
                   <span className="font-semibold text-slate-700">Hora Inicio:</span>
                   <span className="text-slate-900">
-                    {new Date(shift.start_date).toLocaleString('es-AR')}
+                    {new Date(shift.start_date).toLocaleString('es-AR', {
+                      timeZone: 'America/Argentina/Buenos_Aires'
+                    })}
                   </span>
                 </div>
                 <div className="flex justify-between">

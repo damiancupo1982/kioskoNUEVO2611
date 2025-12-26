@@ -18,6 +18,7 @@ interface DashboardProps {
 export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
   const [currentView, setCurrentView] = useState<View>('ventas');
   const [businessName, setBusinessName] = useState('Kiosco Damian');
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   const [cashInBox, setCashInBox] = useState(0);
   const [transferInBox, setTransferInBox] = useState(0);
@@ -26,6 +27,12 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
 
   useEffect(() => {
     loadBusinessName();
+
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -131,7 +138,13 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 <p className="text-sm text-slate-600">Sistema de Gestión POS</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
+              <div className="text-center bg-slate-50 px-4 py-2 rounded-xl border border-slate-200">
+                <p className="text-xs text-slate-500 font-medium mb-0.5">Hora Local</p>
+                <p className="text-lg font-bold text-slate-800 tabular-nums">
+                  {currentTime.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                </p>
+              </div>
               <div className="text-right">
                 <p className="text-sm font-semibold text-slate-700">
                   {shift ? 'Turno Activo' : 'Sin turno activo'}

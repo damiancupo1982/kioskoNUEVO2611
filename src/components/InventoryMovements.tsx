@@ -25,6 +25,22 @@ export default function InventoryMovements() {
     description: ''
   });
 
+  const askAdminPassword = () => {
+    const password = window.prompt('Ingresá la clave de administrador:');
+
+    if (!password) {
+      alert('Operación cancelada.');
+      return false;
+    }
+
+    if (password === 'admin123') {
+      return true;
+    }
+
+    alert('Clave incorrecta. No tenés permisos para esta acción.');
+    return false;
+  };
+
   useEffect(() => {
     loadData();
   }, []);
@@ -50,6 +66,9 @@ export default function InventoryMovements() {
       alert('Completa todos los campos requeridos');
       return;
     }
+
+    const ok = askAdminPassword();
+    if (!ok) return;
 
     const selectedProduct = products.find(p => p.id === formData.product_id);
     if (!selectedProduct) return;
@@ -288,7 +307,15 @@ export default function InventoryMovements() {
                 filteredMovements.map(movement => (
                   <tr key={movement.id} className="hover:bg-slate-50 transition">
                     <td className="px-6 py-4 text-sm text-slate-700">
-                      {new Date(movement.created_at).toLocaleString('es-AR')}
+                      {new Date(movement.created_at).toLocaleString('es-AR', {
+                        timeZone: 'America/Argentina/Buenos_Aires',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                      })}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${
