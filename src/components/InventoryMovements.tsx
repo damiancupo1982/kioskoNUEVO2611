@@ -25,22 +25,6 @@ export default function InventoryMovements() {
     description: ''
   });
 
-  const askAdminPassword = () => {
-    const password = window.prompt('Ingresá la clave de administrador:');
-
-    if (!password) {
-      alert('Operación cancelada.');
-      return false;
-    }
-
-    if (password === 'admin123') {
-      return true;
-    }
-
-    alert('Clave incorrecta. No tenés permisos para esta acción.');
-    return false;
-  };
-
   useEffect(() => {
     loadData();
   }, []);
@@ -66,9 +50,6 @@ export default function InventoryMovements() {
       alert('Completa todos los campos requeridos');
       return;
     }
-
-    const ok = askAdminPassword();
-    if (!ok) return;
 
     const selectedProduct = products.find(p => p.id === formData.product_id);
     if (!selectedProduct) return;
