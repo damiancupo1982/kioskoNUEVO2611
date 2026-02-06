@@ -296,45 +296,63 @@ export default function Stock() {
   const lowStockProducts = products.filter((p) => p.stock <= p.min_stock);
 
   return (
-    <div className="space-y-6">
-      {/* BUSCADOR + ORDENAMIENTO + NUEVO PRODUCTO */}
-      <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+    <div className="space-y-4">
+      {/* BUSCADOR + NUEVO PRODUCTO */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <div className="relative flex-1">
           <Search
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            size={20}
+            size={18}
           />
           <input
             type="text"
             placeholder="Buscar productos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
           />
-        </div>
-
-        <div className="relative min-w-[200px]">
-          <ArrowUpDown
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400"
-            size={18}
-          />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none cursor-pointer"
-          >
-            <option value="alphabetical">Orden Alfabético</option>
-            <option value="category">Por Familia</option>
-            <option value="stock-status">Por Estado de Stock</option>
-          </select>
         </div>
 
         <button
           onClick={openNewModal}
-          className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-6 py-2.5 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap"
+          className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-5 py-2 rounded-lg flex items-center justify-center gap-2 shadow-lg transition-all duration-200 hover:scale-105 whitespace-nowrap"
         >
-          <Plus size={20} />
+          <Plus size={18} />
           Nuevo Producto
+        </button>
+      </div>
+
+      {/* BOTONES DE ORDENAMIENTO */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setSortBy('alphabetical')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            sortBy === 'alphabetical'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          Alfabético
+        </button>
+        <button
+          onClick={() => setSortBy('category')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            sortBy === 'category'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          Por Familia
+        </button>
+        <button
+          onClick={() => setSortBy('stock-status')}
+          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+            sortBy === 'stock-status'
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+          }`}
+        >
+          Por Stock
         </button>
       </div>
 
@@ -367,7 +385,7 @@ export default function Stock() {
       )}
 
       {/* LISTA DE PRODUCTOS */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredProducts.map((product) => {
           const stockStatus = getStockStatus(product);
           const stockPercentage = product.min_stock > 0
@@ -376,9 +394,9 @@ export default function Stock() {
 
           const statusColors = {
             none: { bg: 'bg-slate-100', border: 'border-slate-300', bar: 'bg-slate-400', text: 'text-slate-700', label: 'Sin Stock' },
-            low: { bg: 'bg-red-50', border: 'border-red-200', bar: 'bg-red-500', text: 'text-red-700', label: 'Stock Bajo' },
-            medium: { bg: 'bg-amber-50', border: 'border-amber-200', bar: 'bg-amber-500', text: 'text-amber-700', label: 'Stock Medio' },
-            high: { bg: 'bg-emerald-50', border: 'border-emerald-200', bar: 'bg-emerald-500', text: 'text-emerald-700', label: 'Stock Alto' }
+            low: { bg: 'bg-red-50', border: 'border-red-200', bar: 'bg-red-500', text: 'text-red-700', label: 'Bajo' },
+            medium: { bg: 'bg-amber-50', border: 'border-amber-200', bar: 'bg-amber-500', text: 'text-amber-700', label: 'Medio' },
+            high: { bg: 'bg-emerald-50', border: 'border-emerald-200', bar: 'bg-emerald-500', text: 'text-emerald-700', label: 'Alto' }
           };
 
           const colors = statusColors[stockStatus];
@@ -386,97 +404,73 @@ export default function Stock() {
           return (
             <div
               key={product.id}
-              className={`${colors.bg} border-l-4 ${colors.border} rounded-xl shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden`}
+              className={`${colors.bg} border-l-4 ${colors.border} rounded-lg shadow-sm hover:shadow-md transition-all duration-200`}
             >
-              <div className="p-4">
-                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-                  {/* Columna 1: Información del producto */}
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-3">
+                  {/* Nombre y código */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <h3 className="font-bold text-slate-800 text-lg mb-1">
-                          {product.name}
-                        </h3>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs text-slate-500 font-mono bg-white px-2 py-1 rounded border border-slate-200">
-                            {product.code}
-                          </span>
-                          {product.category && (
-                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">
-                              {product.category}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
-                      <div>
-                        <p className="text-xs text-slate-600 mb-1">Precio</p>
-                        <p className="text-lg font-bold text-emerald-600">
-                          ${product.price.toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 mb-1">Costo</p>
-                        <p className="text-sm font-semibold text-slate-700">
-                          ${product.cost.toFixed(2)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 mb-1">Stock</p>
-                        <p className={`text-lg font-bold ${colors.text}`}>
-                          {product.stock} u.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-600 mb-1 flex items-center gap-1">
-                          <TrendingUp size={12} />
-                          Vendidos (7d)
-                        </p>
-                        <p className="text-lg font-bold text-blue-600">
-                          {product.sold_last_7_days}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-slate-800 text-sm truncate">
+                        {product.name}
+                      </h3>
+                      <span className="text-xs text-slate-500 font-mono bg-white px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
+                        {product.code}
+                      </span>
+                      {product.category && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-medium shrink-0">
+                          {product.category}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Columna 2: Barra de stock */}
-                  <div className="flex-1 lg:max-w-xs">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-600">Estado:</span>
-                        <span className={`text-xs font-bold ${colors.text} px-2 py-1 rounded-full ${colors.bg} border ${colors.border}`}>
-                          {colors.label}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3 overflow-hidden">
+                  {/* Datos en línea */}
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">Precio</p>
+                      <p className="text-sm font-bold text-emerald-600">${product.price.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">Stock</p>
+                      <p className={`text-sm font-bold ${colors.text}`}>{product.stock}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">Vendidos 7d</p>
+                      <p className="text-sm font-bold text-blue-600">{product.sold_last_7_days}</p>
+                    </div>
+                  </div>
+
+                  {/* Barra de stock */}
+                  <div className="w-32 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
                         <div
                           className={`${colors.bar} h-full rounded-full transition-all duration-500`}
                           style={{ width: `${stockPercentage}%` }}
                         />
                       </div>
-                      <p className="text-xs text-slate-500">
-                        Mínimo: {product.min_stock} unidades
-                      </p>
+                      <span className={`text-xs font-bold ${colors.text} shrink-0`}>
+                        {colors.label}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Columna 3: Acciones */}
-                  <div className="flex lg:flex-col gap-2">
+                  {/* Acciones */}
+                  <div className="flex gap-1 shrink-0">
                     <button
                       onClick={() => handleEdit(product)}
-                      className="flex-1 lg:flex-none p-2.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+                      className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
                       title="Editar"
                     >
-                      <Edit2 size={18} />
+                      <Edit2 size={14} />
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
-                      className="flex-1 lg:flex-none p-2.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors border border-red-200"
+                      className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
                       title="Eliminar"
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
