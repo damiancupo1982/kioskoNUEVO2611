@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, Shift, CashTransaction } from '../lib/supabase';
-import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, LogOut, Clock, Calendar, X } from 'lucide-react';
+import { supabase, Shift, CashTransaction, Sale } from '../lib/supabase';
+import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, LogOut, Clock, Calendar, X, Download, ShoppingCart } from 'lucide-react';
 
 interface CajaProps {
   shift: Shift | null;
@@ -14,10 +14,13 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   const [showModal, setShowModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [closingCash, setClosingCash] = useState('');
   const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
+  const [selectedTransaction, setSelectedTransaction] = useState<CashTransaction | null>(null);
+  const [relatedSale, setRelatedSale] = useState<Sale | null>(null);
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense',
     category: '',
@@ -100,6 +103,67 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
 
   const handleCloseShift = () => {
     setShowCloseModal(true);
+  };
+
+  const findRelatedSale = useCallback(async (transaction: CashTransaction) => {
+    const match = transaction.description.match(/V-(\d+)/);
+    if (!match) {
+      setRelatedSale(null);
+      return;
+    }
+
+    const saleNumber = `V-${match[1]}`;
+    const { data } = await supabase
+      .from('sales')
+      .select('*')
+      .eq('sale_number', saleNumber)
+      .maybeSingle();
+
+    setRelatedSale(data || null);
+  }, []);
+
+  const handleTransactionClick = async (transaction: CashTransaction) => {
+    setSelectedTransaction(transaction);
+    await findRelatedSale(transaction);
+    setShowDetailModal(true);
+  };
+
+  const exportToCSV = () => {
+    if (transactions.length === 0) {
+      alert('No hay transacciones para exportar');
+      return;
+    }
+
+    const headers = ['Fecha', 'Hora', 'Tipo', 'Categoría', 'Monto', 'Método de Pago', 'Descripción'];
+    const rows = transactions.map(t => {
+      const date = new Date(t.created_at);
+      const dateStr = date.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+      const timeStr = date.toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+      return [
+        dateStr,
+        timeStr,
+        t.type === 'income' ? 'Ingreso' : 'Egreso',
+        t.category,
+        t.amount.toString(),
+        t.payment_method,
+        t.description
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `movimientos_caja_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const confirmCloseShift = () => {
@@ -275,6 +339,17 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </button>
         </div>
 
+        {/* Botón exportar */}
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={exportToCSV}
+            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transition-all"
+          >
+            <Download size={18} />
+            Exportar CSV
+          </button>
+        </div>
+
         {/* Filtros de período */}
         <div className="flex flex-wrap gap-2 mb-4">
           <button
@@ -358,7 +433,11 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </thead>
           <tbody>
             {transactions.map((t) => (
-              <tr key={t.id} className="border-t border-slate-200 hover:bg-slate-50">
+              <tr
+                key={t.id}
+                onClick={() => handleTransactionClick(t)}
+                className="border-t border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
+              >
                 <td className="px-6 py-4 text-sm text-slate-700">
                   {new Date(t.created_at).toLocaleString('es-AR', {
                     timeZone: 'America/Argentina/Buenos_Aires'
@@ -559,6 +638,183 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-cyan-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal detalle de transacción */}
+      {showDetailModal && selectedTransaction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 p-6 rounded-t-2xl flex items-center justify-between sticky top-0">
+              <h3 className="text-2xl font-bold text-white">Detalle de Transacción</h3>
+              <button
+                onClick={() => {
+                  setShowDetailModal(false);
+                  setSelectedTransaction(null);
+                  setRelatedSale(null);
+                }}
+                className="text-white hover:bg-white/20 p-1 rounded"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Información básica */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-600">Tipo</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedTransaction.type === 'income' ? (
+                      <span className="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">
+                        <TrendingUp size={16} />
+                        Ingreso
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">
+                        <TrendingDown size={16} />
+                        Egreso
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-slate-600">Fecha y Hora</p>
+                  <p className="text-lg font-bold text-slate-800 mt-1">
+                    {new Date(selectedTransaction.created_at).toLocaleString('es-AR', {
+                      timeZone: 'America/Argentina/Buenos_Aires'
+                    })}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-slate-600">Categoría</p>
+                  <p className="text-slate-800 mt-1">{selectedTransaction.category}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-semibold text-slate-600">Método de Pago</p>
+                  <p className="text-slate-800 mt-1">{selectedTransaction.payment_method}</p>
+                </div>
+
+                <div className="col-span-2">
+                  <p className="text-sm font-semibold text-slate-600">Monto Total</p>
+                  <p className="text-3xl font-bold text-slate-800 mt-1">
+                    ${selectedTransaction.amount.toFixed(2)}
+                  </p>
+                </div>
+
+                {selectedTransaction.description && (
+                  <div className="col-span-2">
+                    <p className="text-sm font-semibold text-slate-600">Descripción</p>
+                    <p className="text-slate-800 mt-1">{selectedTransaction.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Detalle de venta si existe */}
+              {relatedSale && (
+                <div className="border-t pt-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <ShoppingCart size={20} className="text-blue-500" />
+                    <h4 className="text-lg font-bold text-slate-800">Detalles de Venta</h4>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-600">Número de Venta</p>
+                      <p className="text-slate-800">{relatedSale.sale_number}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-600">Vendedor</p>
+                      <p className="text-slate-800">{relatedSale.user_name}</p>
+                    </div>
+                    {relatedSale.customer_name && (
+                      <div>
+                        <p className="text-sm font-semibold text-slate-600">Cliente</p>
+                        <p className="text-slate-800">{relatedSale.customer_name}</p>
+                      </div>
+                    )}
+                    {relatedSale.customer_lot && (
+                      <div>
+                        <p className="text-sm font-semibold text-slate-600">Lote</p>
+                        <p className="text-slate-800">{relatedSale.customer_lot}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Productos vendidos */}
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600">
+                            Producto
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">
+                            Cant.
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">
+                            Precio
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600">
+                            Subtotal
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {relatedSale.items && relatedSale.items.map((item: any, idx: number) => (
+                          <tr key={idx} className="border-t border-slate-200">
+                            <td className="px-4 py-3 text-sm text-slate-700">{item.product_name}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700 text-right">x{item.quantity}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700 text-right">
+                              ${Number(item.price).toFixed(2)}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-bold text-slate-800 text-right">
+                              ${Number(item.subtotal).toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    <div className="bg-slate-50 p-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span className="font-semibold text-slate-600">Subtotal:</span>
+                        <span className="text-slate-800">${Number(relatedSale.subtotal).toFixed(2)}</span>
+                      </div>
+                      {relatedSale.discount > 0 && (
+                        <div className="flex justify-between">
+                          <span className="font-semibold text-slate-600">Descuento:</span>
+                          <span className="text-slate-800">-${Number(relatedSale.discount).toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between border-t border-slate-200 pt-2">
+                        <span className="font-bold text-slate-800">Total:</span>
+                        <span className="text-lg font-bold text-blue-600">
+                          ${Number(relatedSale.total).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    setSelectedTransaction(null);
+                    setRelatedSale(null);
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50"
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
