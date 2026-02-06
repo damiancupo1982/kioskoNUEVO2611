@@ -35,6 +35,40 @@ function App() {
     }
   };
 
+  const getLastShiftClosingCash = async (userId: string): Promise<number | null> => {
+    const { data: lastShift } = await supabase
+      .from('shifts')
+      .select('closing_cash')
+      .eq('user_id', userId)
+      .eq('active', false)
+      .order('end_date', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return lastShift?.closing_cash ? Number(lastShift.closing_cash) : null;
+  };
+
+  const handleUsernameChange = async (username: string) => {
+    setLoginForm({ ...loginForm, username });
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('active', true)
+      .maybeSingle();
+
+    if (user) {
+      const lastClosingCash = await getLastShiftClosingCash(user.id);
+      if (lastClosingCash !== null) {
+        setLoginForm(prev => ({
+          ...prev,
+          opening_cash: lastClosingCash.toString()
+        }));
+      }
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
@@ -143,7 +177,7 @@ function App() {
                 type="text"
                 required
                 value={loginForm.username}
-                onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                onChange={(e) => handleUsernameChange(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                 placeholder="Ingresa tu usuario"
               />
@@ -171,7 +205,14 @@ function App() {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Efectivo Inicial *</label>
+              <div className="flex items-center gap-2 mb-2">
+                <label className="block text-sm font-semibold text-slate-700">Efectivo Inicial *</label>
+                {loginForm.opening_cash && loginForm.username && (
+                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
+                    Cierre anterior
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">$</span>
                 <input
