@@ -321,23 +321,32 @@ export default function Ventas({ shift }: VentasProps) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-[500px] overflow-y-auto pr-2">
           {filtered.map((p) => (
             <button
               key={p.id}
               onClick={() => addToCart(p)}
-              className="bg-gradient-to-br from-white to-slate-50 border-2 border-slate-200 hover:border-emerald-500 rounded-xl p-4 text-left transition-all hover:shadow-lg"
+              className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-300 hover:border-emerald-500 rounded-xl p-4 text-left transition-all hover:shadow-xl hover:scale-105 active:scale-95"
             >
-              <h3 className="font-bold text-slate-800 mb-1">{p.name}</h3>
-              {p.category && (
-                <p className="text-xs text-slate-500 mb-1">
-                  {p.category}
-                </p>
-              )}
-              <p className="text-2xl font-bold text-emerald-600">
+              <div className="flex justify-between items-start mb-1">
+                <h3 className="font-bold text-slate-800 text-sm flex-1">{p.name}</h3>
+                {p.category && (
+                  <span className="text-xs bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold ml-2">
+                    {p.category.substring(0, 3)}
+                  </span>
+                )}
+              </div>
+              <p className="text-2xl font-bold text-emerald-700 mb-1">
                 ${p.price.toFixed(2)}
               </p>
-              <p className="text-xs text-slate-500 mt-1">Stock: {p.stock}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-slate-600">
+                  Stock: <span className="text-slate-800">{p.stock}</span>
+                </p>
+                <div className="bg-white rounded-full p-1.5 shadow-sm">
+                  <Plus size={14} className="text-emerald-600" />
+                </div>
+              </div>
             </button>
           ))}
         </div>
@@ -345,25 +354,25 @@ export default function Ventas({ shift }: VentasProps) {
 
       {/* CARRITO + CLIENTE + PAGOS */}
       <div className="space-y-4">
-        <div className="bg-gradient-to-br from-white to-slate-50 rounded-xl shadow-lg p-4 border-2 border-slate-200">
-          <div className="flex items-center gap-2 mb-4">
+        <div className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-xl shadow-xl p-4 border-2 border-emerald-200">
+          <div className="flex items-center gap-2 mb-4 bg-white rounded-lg p-2 shadow-sm">
             <ShoppingCart className="text-emerald-600" size={24} />
-            <h3 className="text-lg font-bold text-slate-800">Carrito</h3>
+            <h3 className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Carrito</h3>
           </div>
 
-          <div className="space-y-2 mb-4 max-h-[220px] overflow-y-auto">
+          <div className="space-y-2 mb-4 max-h-[220px] overflow-y-auto pr-2">
             {cart.map((item) => (
               <div
                 key={item.product_id}
-                className="bg-white rounded-lg p-3 border border-slate-200"
+                className="bg-gradient-to-r from-white to-emerald-50 rounded-lg p-3 border-2 border-emerald-200 shadow-md"
               >
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-medium text-sm">
+                  <span className="font-bold text-sm text-slate-800">
                     {item.product_name}
                   </span>
                   <button
                     onClick={() => updateQuantity(item.product_id, 0)}
-                    className="text-red-600"
+                    className="text-red-600 hover:bg-red-100 rounded-full p-1"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -374,24 +383,24 @@ export default function Ventas({ shift }: VentasProps) {
                       onClick={() =>
                         updateQuantity(item.product_id, item.quantity - 1)
                       }
-                      className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center"
+                      className="w-8 h-8 bg-gradient-to-r from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 text-red-700 rounded-lg flex items-center justify-center font-bold"
                     >
                       <Minus size={16} />
                     </button>
-                    <span className="w-8 text-center font-bold">
+                    <span className="w-10 text-center font-bold text-lg text-emerald-700">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() =>
                         updateQuantity(item.product_id, item.quantity + 1)
                       }
-                      className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center"
+                      className="w-8 h-8 bg-gradient-to-r from-emerald-100 to-emerald-200 hover:from-emerald-200 hover:to-emerald-300 text-emerald-700 rounded-lg flex items-center justify-center font-bold"
                     >
                       <Plus size={16} />
                     </button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-600">$</span>
+                    <span className="text-xs text-slate-600 font-bold">$</span>
                     <input
                       type="number"
                       step="0.01"
@@ -403,12 +412,12 @@ export default function Ventas({ shift }: VentasProps) {
                           parseFloat(e.target.value) || 0
                         )
                       }
-                      className="w-20 px-2 py-1 text-sm border border-slate-300 rounded-lg text-right"
+                      className="w-20 px-2 py-1 text-sm border-2 border-slate-300 rounded-lg text-right font-bold focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200"
                     />
                   </div>
                 </div>
-                <div className="flex justify-end">
-                  <span className="font-bold text-emerald-600">
+                <div className="flex justify-end bg-emerald-100 rounded-lg px-2 py-1">
+                  <span className="font-bold text-emerald-700">
                     ${item.subtotal.toFixed(2)}
                   </span>
                 </div>
@@ -417,47 +426,45 @@ export default function Ventas({ shift }: VentasProps) {
           </div>
 
           {/* DATOS DEL CLIENTE */}
-          <div className="space-y-2 mb-4">
+          <div className="space-y-2 mb-4 bg-white rounded-lg p-3 shadow-sm border-2 border-slate-200">
+            <p className="text-xs font-bold text-slate-600 mb-2">Datos del Cliente</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
                 placeholder="Nombre del cliente"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                className="w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400"
               />
               <input
                 type="text"
                 placeholder="Lote"
                 value={customerLot}
                 onChange={(e) => setCustomerLot(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm"
+                className="w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400"
               />
             </div>
           </div>
 
           {/* PAGOS */}
-          <div className="border-t-2 border-slate-200 pt-4 space-y-3">
+          <div className="border-t-2 border-emerald-300 pt-4 space-y-3">
+            <p className="text-sm font-bold text-slate-700">Métodos de Pago</p>
             <div className="space-y-2">
-              <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2">
-                <span className="text-sm font-medium text-slate-700">
-                  Efectivo
-                </span>
+              <div className="flex items-center justify-between bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-green-800">Efectivo</span>
                 <input
                   type="number"
                   min={0}
                   step="0.01"
                   value={cashAmount || ''}
                   onChange={(e) => setCashAmount(parseAmount(e.target.value))}
-                  className="w-28 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right"
+                  className="w-28 px-2 py-1 bg-white border-2 border-green-300 rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-green-400"
                   placeholder="0"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2">
-                <span className="text-sm font-medium text-slate-700">
-                  Transferencia
-                </span>
+              <div className="flex items-center justify-between bg-gradient-to-r from-blue-100 to-cyan-100 border-2 border-blue-300 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-blue-800">Transferencia</span>
                 <input
                   type="number"
                   min={0}
@@ -466,28 +473,26 @@ export default function Ventas({ shift }: VentasProps) {
                   onChange={(e) =>
                     setTransferAmount(parseAmount(e.target.value))
                   }
-                  className="w-28 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right"
+                  className="w-28 px-2 py-1 bg-white border-2 border-blue-300 rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-blue-400"
                   placeholder="0"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2">
-                <span className="text-sm font-medium text-slate-700">QR</span>
+              <div className="flex items-center justify-between bg-gradient-to-r from-purple-100 to-pink-100 border-2 border-purple-300 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-purple-800">QR</span>
                 <input
                   type="number"
                   min={0}
                   step="0.01"
                   value={qrAmount || ''}
                   onChange={(e) => setQrAmount(parseAmount(e.target.value))}
-                  className="w-28 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right"
+                  className="w-28 px-2 py-1 bg-white border-2 border-purple-300 rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-purple-400"
                   placeholder="0"
                 />
               </div>
 
-              <div className="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-3 py-2">
-                <span className="text-sm font-medium text-slate-700">
-                  Expensas
-                </span>
+              <div className="flex items-center justify-between bg-gradient-to-r from-orange-100 to-red-100 border-2 border-orange-300 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-orange-800">Expensas</span>
                 <input
                   type="number"
                   min={0}
@@ -496,15 +501,15 @@ export default function Ventas({ shift }: VentasProps) {
                   onChange={(e) =>
                     setExpensasAmount(parseAmount(e.target.value))
                   }
-                  className="w-28 px-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-sm text-right"
+                  className="w-28 px-2 py-1 bg-white border-2 border-orange-300 rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-orange-400"
                   placeholder="0"
                 />
               </div>
             </div>
 
-            <div className="flex justify-between items-center text-2xl font-bold">
-              <span>Total:</span>
-              <span className="text-emerald-600">
+            <div className="flex justify-between items-center text-2xl font-bold bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-400 rounded-lg p-3">
+              <span className="text-slate-800">Total:</span>
+              <span className="text-emerald-700">
                 ${total.toFixed(2)}
               </span>
             </div>
@@ -512,7 +517,7 @@ export default function Ventas({ shift }: VentasProps) {
             <button
               onClick={handleCompleteSale}
               disabled={!cart.length}
-              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
+              className="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-400 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-xl transition-all hover:scale-105 active:scale-95"
             >
               <CreditCard size={24} />
               Completar Venta

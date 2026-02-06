@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp } from 'lucide-react';
+import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity } from 'lucide-react';
 import { Shift, supabase, CashTransaction } from '../lib/supabase';
 import Ventas from './Ventas';
 import Stock from './Stock';
@@ -25,6 +25,15 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
   const [qrInBox, setQrInBox] = useState(0);
   const [expensasInBox, setExpensasInBox] = useState(0);
 
+  const [lucesToday, setLucesToday] = useState(0);
+  const [lucesMonth, setLucesMonth] = useState(0);
+  const [invitadosToday, setInvitadosToday] = useState(0);
+  const [invitadosMonth, setInvitadosMonth] = useState(0);
+  const [paletasToday, setPaletasToday] = useState(0);
+  const [paletasMonth, setPaletasMonth] = useState(0);
+  const [topProduct, setTopProduct] = useState('Cargando...');
+  const [topProductQty, setTopProductQty] = useState(0);
+
   useEffect(() => {
     loadBusinessName();
 
@@ -38,11 +47,13 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
   useEffect(() => {
     if (shift) {
       loadTotals();
+      loadMetrics();
     } else {
       setCashInBox(0);
       setTransferInBox(0);
       setQrInBox(0);
       setExpensasInBox(0);
+      resetMetrics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shift]);
@@ -111,6 +122,76 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
     setExpensasInBox(expensas);
   };
 
+  const resetMetrics = () => {
+    setLucesToday(0);
+    setLucesMonth(0);
+    setInvitadosToday(0);
+    setInvitadosMonth(0);
+    setPaletasToday(0);
+    setPaletasMonth(0);
+    setTopProduct('-');
+    setTopProductQty(0);
+  };
+
+  const loadMetrics = async () => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const { data: salesToday } = await supabase
+      .from('sales')
+      .select('items')
+      .gte('created_at', startOfDay);
+
+    const { data: salesMonth } = await supabase
+      .from('sales')
+      .select('items')
+      .gte('created_at', startOfMonth);
+
+    let lT = 0, lM = 0, iT = 0, iM = 0, pT = 0, pM = 0;
+    const prodCount: Record<string, number> = {};
+
+    if (salesToday) {
+      salesToday.forEach(s => {
+        (s.items || []).forEach((item: { product_name: string; quantity: number }) => {
+          const name = item.product_name.toLowerCase();
+          if (name.includes('luz')) lT += item.quantity;
+          if (name.includes('invitado')) iT += item.quantity;
+          if (name.includes('paleta')) pT += item.quantity;
+        });
+      });
+    }
+
+    if (salesMonth) {
+      salesMonth.forEach(s => {
+        (s.items || []).forEach((item: { product_name: string; quantity: number }) => {
+          const name = item.product_name.toLowerCase();
+          if (name.includes('luz')) lM += item.quantity;
+          if (name.includes('invitado')) iM += item.quantity;
+          if (name.includes('paleta')) pM += item.quantity;
+          prodCount[item.product_name] = (prodCount[item.product_name] || 0) + item.quantity;
+        });
+      });
+    }
+
+    let topP = '-', topQ = 0;
+    Object.entries(prodCount).forEach(([name, qty]) => {
+      if (qty > topQ) {
+        topP = name;
+        topQ = qty;
+      }
+    });
+
+    setLucesToday(lT);
+    setLucesMonth(lM);
+    setInvitadosToday(iT);
+    setInvitadosMonth(iM);
+    setPaletasToday(pT);
+    setPaletasMonth(pM);
+    setTopProduct(topP);
+    setTopProductQty(topQ);
+  };
+
   const menuItems = [
     { id: 'ventas' as View, label: 'Ventas', icon: ShoppingCart, color: 'from-emerald-500 to-teal-600' },
     { id: 'stock' as View, label: 'Inventario', icon: Package, color: 'from-blue-500 to-cyan-600' },
@@ -164,43 +245,78 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
       </header>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Tarjetas de totales por método de pago */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
-            <p className="text-sm font-semibold text-slate-600">Caja Efectivo</p>
-            <p className="text-2xl font-bold text-emerald-600">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+          <div className="bg-white rounded-lg p-2 shadow border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600">Caja Efectivo</p>
+            <p className="text-lg font-bold text-emerald-600">
               {shift ? `$${cashInBox.toFixed(2)}` : '--'}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Efectivo inicial + ingresos - egresos
-            </p>
+            <p className="text-xs text-slate-500">Efectivo inicial + ingresos - egresos</p>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
-            <p className="text-sm font-semibold text-slate-600">Transferencias</p>
-            <p className="text-2xl font-bold text-slate-800">
+          <div className="bg-white rounded-lg p-2 shadow border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600">Transferencias</p>
+            <p className="text-lg font-bold text-slate-800">
               {shift ? `$${transferInBox.toFixed(2)}` : '--'}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Ingresos - egresos por transferencia
-            </p>
+            <p className="text-xs text-slate-500">Ingresos - egresos por transferencia</p>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
-            <p className="text-sm font-semibold text-slate-600">QR</p>
-            <p className="text-2xl font-bold text-slate-800">
+          <div className="bg-white rounded-lg p-2 shadow border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600">QR</p>
+            <p className="text-lg font-bold text-slate-800">
               {shift ? `$${qrInBox.toFixed(2)}` : '--'}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Ingresos - egresos por QR
-            </p>
+            <p className="text-xs text-slate-500">Ingresos - egresos por QR</p>
           </div>
-          <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
-            <p className="text-sm font-semibold text-slate-600">Expensas</p>
-            <p className="text-2xl font-bold text-slate-800">
+          <div className="bg-white rounded-lg p-2 shadow border border-slate-200">
+            <p className="text-xs font-semibold text-slate-600">Expensas</p>
+            <p className="text-lg font-bold text-slate-800">
               {shift ? `$${expensasInBox.toFixed(2)}` : '--'}
             </p>
-            <p className="text-xs text-slate-500 mt-1">
-              Ingresos - egresos por expensas
-            </p>
+            <p className="text-xs text-slate-500">Ingresos - egresos por expensas</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+          <div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-lg p-2 shadow border-2 border-yellow-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Lightbulb className="text-yellow-600" size={16} />
+              <p className="text-xs font-bold text-yellow-800">Luces</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div><p className="text-xs text-slate-600">Hoy</p><p className="text-lg font-bold text-yellow-700">{lucesToday}</p></div>
+              <div className="text-slate-300">|</div>
+              <div><p className="text-xs text-slate-600">Mes</p><p className="text-lg font-bold text-yellow-700">{lucesMonth}</p></div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-2 shadow border-2 border-blue-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="text-blue-600" size={16} />
+              <p className="text-xs font-bold text-blue-800">Invitados</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div><p className="text-xs text-slate-600">Hoy</p><p className="text-lg font-bold text-blue-700">{invitadosToday}</p></div>
+              <div className="text-slate-300">|</div>
+              <div><p className="text-xs text-slate-600">Mes</p><p className="text-lg font-bold text-blue-700">{invitadosMonth}</p></div>
+            </div>
+          </div>
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-2 shadow border-2 border-purple-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Trophy className="text-purple-600" size={16} />
+              <p className="text-xs font-bold text-purple-800">Art + Vendido</p>
+            </div>
+            <p className="text-xs font-semibold text-slate-700 truncate">{topProduct}</p>
+            <p className="text-lg font-bold text-purple-700">{topProductQty} u.</p>
+          </div>
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-2 shadow border-2 border-emerald-200">
+            <div className="flex items-center gap-2 mb-1">
+              <Activity className="text-emerald-600" size={16} />
+              <p className="text-xs font-bold text-emerald-800">Paletas</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div><p className="text-xs text-slate-600">Hoy</p><p className="text-lg font-bold text-emerald-700">{paletasToday}</p></div>
+              <div className="text-slate-300">|</div>
+              <div><p className="text-xs text-slate-600">Mes</p><p className="text-lg font-bold text-emerald-700">{paletasMonth}</p></div>
+            </div>
           </div>
         </div>
 
