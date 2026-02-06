@@ -1,17 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase, Shift, CashTransaction } from '../lib/supabase';
-import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, LogOut, Clock, Calendar } from 'lucide-react';
+import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, LogOut, Clock, Calendar, X } from 'lucide-react';
 
 interface CajaProps {
   shift: Shift | null;
   onCloseShift: (closingCash: number) => void;
 }
 
+type PeriodType = 'today' | 'week' | 'month' | 'all' | 'custom';
+
 export default function Caja({ shift, onCloseShift }: CajaProps) {
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
+  const [showCustomDateModal, setShowCustomDateModal] = useState(false);
   const [closingCash, setClosingCash] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodType>('today');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense',
     category: '',
@@ -20,21 +26,59 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     description: ''
   });
 
-  useEffect(() => {
-    if (shift) {
-      loadTransactions();
-    }
-  }, [shift]);
+  const getDateRange = useCallback(() => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-  const loadTransactions = async () => {
+    switch (selectedPeriod) {
+      case 'today':
+        return { from: startOfDay, to: endOfDay };
+      case 'week': {
+        const dayOfWeek = startOfDay.getDay();
+        const diff = startOfDay.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const monday = new Date(startOfDay.setDate(diff));
+        return { from: monday, to: endOfDay };
+      }
+      case 'month': {
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: firstDay, to: endOfDay };
+      }
+      case 'custom':
+        return {
+          from: customDateFrom ? new Date(customDateFrom) : startOfDay,
+          to: customDateTo ? new Date(customDateTo) : endOfDay
+        };
+      case 'all':
+      default:
+        return { from: new Date(0), to: endOfDay };
+    }
+  }, [selectedPeriod, customDateFrom, customDateTo]);
+
+  const loadTransactions = useCallback(async () => {
     if (!shift) return;
     const { data } = await supabase
       .from('cash_transactions')
       .select('*')
       .eq('shift_id', shift.id)
       .order('created_at', { ascending: false });
-    setTransactions(data || []);
-  };
+
+    const allTransactions = data || [];
+    const dateRange = getDateRange();
+
+    const filteredTransactions = allTransactions.filter(t => {
+      const transactionDate = new Date(t.created_at);
+      return transactionDate >= dateRange.from && transactionDate <= dateRange.to;
+    });
+
+    setTransactions(filteredTransactions);
+  }, [shift, getDateRange]);
+
+  useEffect(() => {
+    if (shift) {
+      loadTransactions();
+    }
+  }, [shift, loadTransactions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,15 +263,72 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       </div>
 
       {/* Título tabla movimientos */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-bold text-slate-800">Movimientos de Caja</h3>
-        <button
-          onClick={() => setShowModal(true)}
-          className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all"
-        >
-          <Plus size={20} />
-          Nuevo Movimiento
-        </button>
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold text-slate-800">Movimientos de Caja</h3>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white px-6 py-2.5 rounded-xl flex items-center gap-2 shadow-lg transition-all"
+          >
+            <Plus size={20} />
+            Nuevo Movimiento
+          </button>
+        </div>
+
+        {/* Filtros de período */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <button
+            onClick={() => setSelectedPeriod('today')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPeriod === 'today'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Hoy
+          </button>
+          <button
+            onClick={() => setSelectedPeriod('week')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPeriod === 'week'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Esta Semana
+          </button>
+          <button
+            onClick={() => setSelectedPeriod('month')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPeriod === 'month'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Este Mes
+          </button>
+          <button
+            onClick={() => setSelectedPeriod('all')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPeriod === 'all'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Todo
+          </button>
+          <button
+            onClick={() => setShowCustomDateModal(true)}
+            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              selectedPeriod === 'custom'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            <Calendar size={16} />
+            Personalizado
+          </button>
+        </div>
       </div>
 
       {/* Tabla de movimientos */}
@@ -391,6 +492,76 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal fechas personalizadas */}
+      {showCustomDateModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="bg-gradient-to-r from-blue-500 to-cyan-600 p-6 rounded-t-2xl flex items-center justify-between">
+              <h3 className="text-2xl font-bold text-white">Rango Personalizado</h3>
+              <button
+                onClick={() => setShowCustomDateModal(false)}
+                className="text-white hover:bg-white/20 p-1 rounded"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Desde *
+                </label>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => setCustomDateFrom(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Hasta *
+                </label>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomDateModal(false);
+                    setCustomDateFrom('');
+                    setCustomDateTo('');
+                  }}
+                  className="flex-1 px-6 py-3 border-2 border-slate-300 text-slate-700 font-semibold rounded-xl hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (customDateFrom && customDateTo) {
+                      setSelectedPeriod('custom');
+                      setShowCustomDateModal(false);
+                    }
+                  }}
+                  disabled={!customDateFrom || !customDateTo}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-cyan-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
