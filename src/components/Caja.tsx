@@ -60,21 +60,17 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
 
   const loadTransactions = useCallback(async () => {
     if (!shift) return;
+
+    const dateRange = getDateRange();
+
     const { data } = await supabase
       .from('cash_transactions')
       .select('*')
-      .eq('shift_id', shift.id)
+      .gte('created_at', dateRange.from.toISOString())
+      .lte('created_at', dateRange.to.toISOString())
       .order('created_at', { ascending: false });
 
-    const allTransactions = data || [];
-    const dateRange = getDateRange();
-
-    const filteredTransactions = allTransactions.filter(t => {
-      const transactionDate = new Date(t.created_at);
-      return transactionDate >= dateRange.from && transactionDate <= dateRange.to;
-    });
-
-    setTransactions(filteredTransactions);
+    setTransactions(data || []);
   }, [shift, getDateRange]);
 
   useEffect(() => {
@@ -174,7 +170,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     }
   };
 
-  // Totales generales
+  // Totales generales basados en las transacciones filtradas
   const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -183,21 +179,15 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
-  const openingCash = Number(shift?.opening_cash || 0);
-  const expectedCash = openingCash + balance;
-
-  // Saldos por método de pago
-
-  // Efectivo: apertura + ingresos efectivo - egresos efectivo
+  // Saldos por método de pago basados en transacciones filtradas
   const incomeCash = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const expenseCash = transactions
     .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const cashInBox = openingCash + incomeCash - expenseCash;
+  const cashInBox = incomeCash - expenseCash;
 
-  // Transferencias: ingresos - egresos
   const incomeTransfer = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'transferencia')
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -206,7 +196,6 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const transferInBox = incomeTransfer - expenseTransfer;
 
-  // QR: ingresos - egresos
   const incomeQr = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'qr')
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -215,7 +204,6 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const qrInBox = incomeQr - expenseQr;
 
-  // Expensas: ingresos - egresos
   const incomeExpensas = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -223,6 +211,16 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .filter(t => t.type === 'expense' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const expensasInBox = incomeExpensas - expenseExpensas;
+
+  // Efectivo esperado para cierre de turno (solo del turno actual)
+  const openingCash = Number(shift?.opening_cash || 0);
+  const currentShiftIncomeCash = transactions
+    .filter(t => t.type === 'income' && t.payment_method === 'efectivo' && t.shift_id === shift?.id)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const currentShiftExpenseCash = transactions
+    .filter(t => t.type === 'expense' && t.payment_method === 'efectivo' && t.shift_id === shift?.id)
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const expectedCash = openingCash + currentShiftIncomeCash - currentShiftExpenseCash;
 
   if (!shift) {
     return (
@@ -303,10 +301,10 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       {/* Saldos por método de pago */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
-          <p className="text-sm font-semibold text-slate-600">Caja Efectivo</p>
+          <p className="text-sm font-semibold text-slate-600">Efectivo</p>
           <p className="text-2xl font-bold text-emerald-600">${cashInBox.toFixed(2)}</p>
           <p className="text-xs text-slate-500 mt-1">
-            Inicial + ingresos - egresos en efectivo
+            Ingresos - egresos en efectivo
           </p>
         </div>
         <div className="bg-white rounded-xl p-4 shadow border border-slate-200">

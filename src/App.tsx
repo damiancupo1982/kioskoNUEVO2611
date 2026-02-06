@@ -15,6 +15,20 @@ function App() {
     initializeShift();
   }, []);
 
+  useEffect(() => {
+    if (showLoginModal) {
+      loadInitialCash();
+    }
+  }, [showLoginModal]);
+
+  const loadInitialCash = async () => {
+    const lastClosingCash = await getLastShiftClosingCash();
+    setLoginForm(prev => ({
+      ...prev,
+      opening_cash: lastClosingCash.toString()
+    }));
+  };
+
   const initializeShift = async () => {
     try {
       const { data: activeShift } = await supabase
@@ -35,38 +49,27 @@ function App() {
     }
   };
 
-  const getLastShiftClosingCash = async (userId: string): Promise<number | null> => {
+  const getLastShiftClosingCash = async (): Promise<number> => {
     const { data: lastShift } = await supabase
       .from('shifts')
       .select('closing_cash')
-      .eq('user_id', userId)
       .eq('active', false)
       .order('end_date', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    return lastShift?.closing_cash ? Number(lastShift.closing_cash) : null;
+    return lastShift?.closing_cash ? Number(lastShift.closing_cash) : 0;
   };
 
   const handleUsernameChange = async (username: string) => {
     setLoginForm({ ...loginForm, username });
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('active', true)
-      .maybeSingle();
-
-    if (user) {
-      const lastClosingCash = await getLastShiftClosingCash(user.id);
-      if (lastClosingCash !== null) {
-        setLoginForm(prev => ({
-          ...prev,
-          opening_cash: lastClosingCash.toString()
-        }));
-      }
-    }
+    const lastClosingCash = await getLastShiftClosingCash();
+    setLoginForm(prev => ({
+      ...prev,
+      username,
+      opening_cash: lastClosingCash.toString()
+    }));
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -206,27 +209,23 @@ function App() {
 
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <label className="block text-sm font-semibold text-slate-700">Efectivo Inicial *</label>
-                {loginForm.opening_cash && loginForm.username && (
-                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
-                    Cierre anterior
-                  </span>
-                )}
+                <label className="block text-sm font-semibold text-slate-700">Efectivo Inicial</label>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
+                  Automático
+                </span>
               </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">$</span>
                 <input
-                  type="number"
-                  required
-                  step="0.01"
-                  min="0"
-                  value={loginForm.opening_cash}
-                  onChange={(e) => setLoginForm({ ...loginForm, opening_cash: e.target.value })}
-                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                  placeholder="0.00"
+                  type="text"
+                  readOnly
+                  value={loginForm.opening_cash || '0.00'}
+                  className="w-full pl-8 pr-4 py-3 bg-slate-100 border-2 border-slate-300 rounded-xl text-slate-700 font-semibold cursor-not-allowed"
                 />
               </div>
-              <p className="text-xs text-slate-500 mt-1">Monto en efectivo con el que inicias el turno</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Monto automático del cierre anterior. Para modificarlo, registra un egreso desde Caja.
+              </p>
             </div>
 
             <button
