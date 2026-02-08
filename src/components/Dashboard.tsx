@@ -169,7 +169,11 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
           if (name.includes('luz')) lM += item.quantity;
           if (name.includes('invitado')) iM += item.quantity;
           if (name.includes('paleta')) pM += item.quantity;
-          prodCount[item.product_name] = (prodCount[item.product_name] || 0) + item.quantity;
+
+          // Excluir luces, invitados y paletas del ranking de más vendido
+          if (!name.includes('luz') && !name.includes('invitado') && !name.includes('paleta')) {
+            prodCount[item.product_name] = (prodCount[item.product_name] || 0) + item.quantity;
+          }
         });
       });
     }
