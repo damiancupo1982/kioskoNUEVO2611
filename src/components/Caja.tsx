@@ -134,7 +134,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     const rows = transactions.map(t => {
       const date = new Date(t.created_at);
       const dateStr = date.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
-      const timeStr = date.toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+      const timeStr = date.toLocaleTimeString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', hour12: false });
       return [
         dateStr,
         timeStr,
@@ -249,7 +249,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
               <span className="flex items-center gap-2">
                 <Clock size={16} />
                 {new Date(shift.start_date).toLocaleTimeString('es-AR', {
-                  timeZone: 'America/Argentina/Buenos_Aires'
+                  timeZone: 'America/Argentina/Buenos_Aires',
+                  hour12: false
                 })}
               </span>
             </div>
@@ -438,7 +439,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
               >
                 <td className="px-6 py-4 text-sm text-slate-700">
                   {new Date(t.created_at).toLocaleString('es-AR', {
-                    timeZone: 'America/Argentina/Buenos_Aires'
+                    timeZone: 'America/Argentina/Buenos_Aires',
+                    hour12: false
                   })}
                 </td>
                 <td className="px-6 py-4">
@@ -685,7 +687,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
                   <p className="text-sm font-semibold text-slate-600">Fecha y Hora</p>
                   <p className="text-lg font-bold text-slate-800 mt-1">
                     {new Date(selectedTransaction.created_at).toLocaleString('es-AR', {
-                      timeZone: 'America/Argentina/Buenos_Aires'
+                      timeZone: 'America/Argentina/Buenos_Aires',
+                      hour12: false
                     })}
                   </p>
                 </div>
@@ -838,7 +841,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
                   <span className="font-semibold text-slate-700">Hora Inicio:</span>
                   <span className="text-slate-900">
                     {new Date(shift.start_date).toLocaleString('es-AR', {
-                      timeZone: 'America/Argentina/Buenos_Aires'
+                      timeZone: 'America/Argentina/Buenos_Aires',
+                      hour12: false
                     })}
                   </span>
                 </div>
