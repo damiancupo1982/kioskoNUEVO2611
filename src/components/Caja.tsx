@@ -170,57 +170,54 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     }
   };
 
-  // Totales generales basados en las transacciones filtradas
-  const totalIncome = transactions
+  // Transacciones solo del turno actual (para cálculos de arqueo)
+  const currentShiftTransactions = transactions.filter(t => t.shift_id === shift?.id);
+
+  // Totales generales SOLO del turno actual
+  const totalIncome = currentShiftTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const totalExpense = transactions
+  const totalExpense = currentShiftTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
-  // Saldos por método de pago basados en transacciones filtradas
-  const incomeCash = transactions
+  // Saldos por método de pago SOLO del turno actual
+  const incomeCash = currentShiftTransactions
     .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseCash = transactions
+  const expenseCash = currentShiftTransactions
     .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const cashInBox = incomeCash - expenseCash;
 
-  const incomeTransfer = transactions
+  const incomeTransfer = currentShiftTransactions
     .filter(t => t.type === 'income' && t.payment_method === 'transferencia')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseTransfer = transactions
+  const expenseTransfer = currentShiftTransactions
     .filter(t => t.type === 'expense' && t.payment_method === 'transferencia')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const transferInBox = incomeTransfer - expenseTransfer;
 
-  const incomeQr = transactions
+  const incomeQr = currentShiftTransactions
     .filter(t => t.type === 'income' && t.payment_method === 'qr')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseQr = transactions
+  const expenseQr = currentShiftTransactions
     .filter(t => t.type === 'expense' && t.payment_method === 'qr')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const qrInBox = incomeQr - expenseQr;
 
-  const incomeExpensas = transactions
+  const incomeExpensas = currentShiftTransactions
     .filter(t => t.type === 'income' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseExpensas = transactions
+  const expenseExpensas = currentShiftTransactions
     .filter(t => t.type === 'expense' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const expensasInBox = incomeExpensas - expenseExpensas;
 
-  // Efectivo esperado para cierre de turno (solo del turno actual)
+  // Efectivo esperado para cierre de turno
   const openingCash = Number(shift?.opening_cash || 0);
-  const currentShiftIncomeCash = transactions
-    .filter(t => t.type === 'income' && t.payment_method === 'efectivo' && t.shift_id === shift?.id)
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const currentShiftExpenseCash = transactions
-    .filter(t => t.type === 'expense' && t.payment_method === 'efectivo' && t.shift_id === shift?.id)
-    .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expectedCash = openingCash + currentShiftIncomeCash - currentShiftExpenseCash;
+  const expectedCash = openingCash + incomeCash - expenseCash;
 
   if (!shift) {
     return (
