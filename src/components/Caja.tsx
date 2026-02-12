@@ -7,7 +7,7 @@ interface CajaProps {
   onCloseShift: (closingCash: number) => void;
 }
 
-type PeriodType = 'today' | 'week' | 'month' | 'all' | 'custom';
+type PeriodType = 'today' | 'week' | 'month' | 'previous_month' | 'all' | 'custom';
 
 export default function Caja({ shift, onCloseShift }: CajaProps) {
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
@@ -46,6 +46,11 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       case 'month': {
         const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
         return { from: firstDay, to: endOfDay };
+      }
+      case 'previous_month': {
+        const firstDayPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        return { from: firstDayPrevMonth, to: lastDayPrevMonth };
       }
       case 'custom':
         return {
@@ -380,6 +385,16 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
             }`}
           >
             Este Mes
+          </button>
+          <button
+            onClick={() => setSelectedPeriod('previous_month')}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              selectedPeriod === 'previous_month'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Mes Anterior
           </button>
           <button
             onClick={() => setSelectedPeriod('all')}
