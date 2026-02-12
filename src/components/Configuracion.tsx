@@ -560,6 +560,9 @@ export default function Configuracion() {
                       Fecha Inicio
                     </th>
                     <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase">
+                      Fecha Cierre
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-600 uppercase">
                       Usuario
                     </th>
                     <th className="px-4 py-3 text-right font-semibold text-slate-600 uppercase">
@@ -617,15 +620,15 @@ export default function Configuracion() {
                       >
                         <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
                           {start.toLocaleString('es-AR', {
-                            timeZone: 'America/Argentina/Buenos_Aires'
+                            timeZone: 'America/Argentina/Buenos_Aires',
+                            hour12: false
                           })}
-                          {end && (
-                            <div className="text-[10px] text-slate-500">
-                              Cierre: {end.toLocaleString('es-AR', {
-                                timeZone: 'America/Argentina/Buenos_Aires'
-                              })}
-                            </div>
-                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                          {end ? end.toLocaleString('es-AR', {
+                            timeZone: 'America/Argentina/Buenos_Aires',
+                            hour12: false
+                          }) : '-'}
                         </td>
                         <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
                           {c.shift.user_name}
