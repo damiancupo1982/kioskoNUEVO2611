@@ -52,11 +52,18 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
         const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
         return { from: firstDayPrevMonth, to: lastDayPrevMonth };
       }
-      case 'custom':
-        return {
-          from: customDateFrom ? new Date(customDateFrom) : startOfDay,
-          to: customDateTo ? new Date(customDateTo) : endOfDay
-        };
+      case 'custom': {
+        const fromDate = customDateFrom ? new Date(customDateFrom) : startOfDay;
+        let toDate = customDateTo ? new Date(customDateTo) : endOfDay;
+
+        // Si hay fecha final, asegurar que incluya todo el día hasta las 23:59:59
+        if (customDateTo) {
+          toDate = new Date(customDateTo);
+          toDate.setHours(23, 59, 59, 999);
+        }
+
+        return { from: fromDate, to: toDate };
+      }
       case 'all':
       default:
         return { from: new Date(0), to: endOfDay };
