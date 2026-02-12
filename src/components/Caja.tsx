@@ -194,6 +194,116 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     document.body.removeChild(link);
   };
 
+  const exportDailySummary = () => {
+    if (transactions.length === 0) {
+      alert('No hay transacciones para exportar');
+      return;
+    }
+
+    // Agrupar transacciones por fecha
+    const dailyTotals = new Map<string, {
+      ingresoEfectivo: number;
+      egresoEfectivo: number;
+      ingresoTransferencias: number;
+      egresoTransferencias: number;
+      ingresoQr: number;
+      ingresoExpensas: number;
+    }>();
+
+    transactions.forEach(t => {
+      const date = new Date(t.created_at);
+      const dateStr = date.toLocaleDateString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' });
+
+      if (!dailyTotals.has(dateStr)) {
+        dailyTotals.set(dateStr, {
+          ingresoEfectivo: 0,
+          egresoEfectivo: 0,
+          ingresoTransferencias: 0,
+          egresoTransferencias: 0,
+          ingresoQr: 0,
+          ingresoExpensas: 0
+        });
+      }
+
+      const day = dailyTotals.get(dateStr)!;
+      const amount = Number(t.amount);
+
+      if (t.payment_method === 'efectivo') {
+        if (t.type === 'income') {
+          day.ingresoEfectivo += amount;
+        } else {
+          day.egresoEfectivo += amount;
+        }
+      } else if (t.payment_method === 'transferencia') {
+        if (t.type === 'income') {
+          day.ingresoTransferencias += amount;
+        } else {
+          day.egresoTransferencias += amount;
+        }
+      } else if (t.payment_method === 'qr') {
+        if (t.type === 'income') {
+          day.ingresoQr += amount;
+        }
+      } else if (t.payment_method === 'expensas') {
+        if (t.type === 'income') {
+          day.ingresoExpensas += amount;
+        }
+      }
+    });
+
+    // Convertir a array y ordenar por fecha
+    const sortedDays = Array.from(dailyTotals.entries()).sort((a, b) => {
+      const dateA = new Date(a[0].split('/').reverse().join('-'));
+      const dateB = new Date(b[0].split('/').reverse().join('-'));
+      return dateA.getTime() - dateB.getTime();
+    });
+
+    const headers = [
+      'Fecha',
+      'Ingreso Efvo',
+      'Egreso Efvo',
+      'Ingreso Transferencias',
+      'Egreso Transferencias',
+      'Ingresos QR',
+      'Ingreso Expensas',
+      'Total del Dia'
+    ];
+
+    const rows = sortedDays.map(([date, totals]) => {
+      const totalDia =
+        totals.ingresoEfectivo - totals.egresoEfectivo +
+        totals.ingresoTransferencias - totals.egresoTransferencias +
+        totals.ingresoQr +
+        totals.ingresoExpensas;
+
+      return [
+        date,
+        totals.ingresoEfectivo.toFixed(2),
+        (-totals.egresoEfectivo).toFixed(2),
+        totals.ingresoTransferencias.toFixed(2),
+        (-totals.egresoTransferencias).toFixed(2),
+        totals.ingresoQr.toFixed(2),
+        totals.ingresoExpensas.toFixed(2),
+        totalDia.toFixed(2)
+      ];
+    });
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `resumen_diario_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const confirmCloseShift = () => {
     if (closingCash && parseFloat(closingCash) >= 0) {
       onCloseShift(parseFloat(closingCash));
@@ -406,8 +516,15 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </button>
         </div>
 
-        {/* Botón exportar */}
-        <div className="flex justify-end mb-4">
+        {/* Botones exportar */}
+        <div className="flex justify-end gap-3 mb-4">
+          <button
+            onClick={exportDailySummary}
+            className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transition-all"
+          >
+            <Download size={18} />
+            Resumen Diario
+          </button>
           <button
             onClick={exportToCSV}
             className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg transition-all"
