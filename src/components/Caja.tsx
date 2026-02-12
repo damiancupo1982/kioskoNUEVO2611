@@ -11,6 +11,7 @@ type PeriodType = 'today' | 'week' | 'month' | 'previous_month' | 'all' | 'custo
 
 export default function Caja({ shift, onCloseShift }: CajaProps) {
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
+  const [monthTransactions, setMonthTransactions] = useState<CashTransaction[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [showCustomDateModal, setShowCustomDateModal] = useState(false);
@@ -85,11 +86,29 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     setTransactions(data || []);
   }, [shift, getDateRange]);
 
+  const loadMonthTransactions = useCallback(async () => {
+    if (!shift) return;
+
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const { data } = await supabase
+      .from('cash_transactions')
+      .select('*')
+      .gte('created_at', firstDayOfMonth.toISOString())
+      .lte('created_at', endOfDay.toISOString())
+      .order('created_at', { ascending: false });
+
+    setMonthTransactions(data || []);
+  }, [shift]);
+
   useEffect(() => {
     if (shift) {
       loadTransactions();
+      loadMonthTransactions();
     }
-  }, [shift, loadTransactions]);
+  }, [shift, loadTransactions, loadMonthTransactions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,6 +124,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     }]);
 
     loadTransactions();
+    loadMonthTransactions();
     setShowModal(false);
     setFormData({ type: 'income', category: '', amount: '', payment_method: 'efectivo', description: '' });
   };
@@ -193,6 +213,15 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
+
+  // Totales del mes en curso
+  const monthIncome = monthTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const monthExpense = monthTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const monthBalance = monthIncome - monthExpense;
 
   // Saldos por método de pago SOLO del turno actual
   const incomeCash = currentShiftTransactions
@@ -285,26 +314,53 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-emerald-100">Ingresos</span>
-            <TrendingUp size={24} />
+            <span className="text-xs text-emerald-100">Ingresos</span>
+            <TrendingUp size={20} />
           </div>
-          <p className="text-3xl font-bold">${totalIncome.toFixed(2)}</p>
+          <div className="space-y-1">
+            <div>
+              <p className="text-[10px] text-emerald-100">Turno</p>
+              <p className="text-xl font-bold">${totalIncome.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-emerald-100">Mes</p>
+              <p className="text-lg font-semibold">${monthIncome.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-gradient-to-br from-red-500 to-pink-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-red-100">Egresos</span>
-            <TrendingDown size={24} />
+            <span className="text-xs text-red-100">Egresos</span>
+            <TrendingDown size={20} />
           </div>
-          <p className="text-3xl font-bold">${totalExpense.toFixed(2)}</p>
+          <div className="space-y-1">
+            <div>
+              <p className="text-[10px] text-red-100">Turno</p>
+              <p className="text-xl font-bold">${totalExpense.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-red-100">Mes</p>
+              <p className="text-lg font-semibold">${monthExpense.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-blue-100">Balance</span>
-            <DollarSign size={24} />
+            <span className="text-xs text-blue-100">Balance</span>
+            <DollarSign size={20} />
           </div>
-          <p className="text-3xl font-bold">${balance.toFixed(2)}</p>
+          <div className="space-y-1">
+            <div>
+              <p className="text-[10px] text-blue-100">Turno</p>
+              <p className="text-xl font-bold">${balance.toFixed(2)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-blue-100">Mes</p>
+              <p className="text-lg font-semibold">${monthBalance.toFixed(2)}</p>
+            </div>
+          </div>
         </div>
       </div>
 
