@@ -172,15 +172,15 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
         timeStr,
         t.type === 'income' ? 'Ingreso' : 'Egreso',
         t.category,
-        t.amount.toString(),
+        t.amount.toFixed(2).replace('.', ','),
         t.payment_method,
         t.description
       ];
     });
 
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      headers.join(';'),
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -278,19 +278,19 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
 
       return [
         date,
-        totals.ingresoEfectivo.toFixed(2),
-        (-totals.egresoEfectivo).toFixed(2),
-        totals.ingresoTransferencias.toFixed(2),
-        (-totals.egresoTransferencias).toFixed(2),
-        totals.ingresoQr.toFixed(2),
-        totals.ingresoExpensas.toFixed(2),
-        totalDia.toFixed(2)
+        totals.ingresoEfectivo.toFixed(2).replace('.', ','),
+        (-totals.egresoEfectivo).toFixed(2).replace('.', ','),
+        totals.ingresoTransferencias.toFixed(2).replace('.', ','),
+        (-totals.egresoTransferencias).toFixed(2).replace('.', ','),
+        totals.ingresoQr.toFixed(2).replace('.', ','),
+        totals.ingresoExpensas.toFixed(2).replace('.', ','),
+        totalDia.toFixed(2).replace('.', ',')
       ];
     });
 
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
