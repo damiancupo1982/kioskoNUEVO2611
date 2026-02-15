@@ -111,39 +111,24 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-    const { data: closedShifts } = await supabase
+    const { data: monthShifts } = await supabase
       .from('shifts')
-      .select('*')
-      .eq('active', false)
-      .gte('end_date', firstDayOfMonth.toISOString())
-      .lte('end_date', endOfDay.toISOString());
+      .select('opening_difference, closing_difference, start_date, end_date, active')
+      .gte('start_date', firstDayOfMonth.toISOString())
+      .lte('start_date', endOfDay.toISOString());
 
-    if (!closedShifts || closedShifts.length === 0) {
+    if (!monthShifts || monthShifts.length === 0) {
       setMonthClosingDifferences(0);
       return;
     }
 
     let totalDifferences = 0;
 
-    for (const closedShift of closedShifts) {
-      const { data: shiftTransactions } = await supabase
-        .from('cash_transactions')
-        .select('*')
-        .eq('shift_id', closedShift.id);
-
-      const cashTransactions = (shiftTransactions || []) as CashTransaction[];
-      const incomeCash = cashTransactions
-        .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      const expenseCash = cashTransactions
-        .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-
-      const expectedCash = Number(closedShift.opening_cash) + incomeCash - expenseCash;
-      const actualClosingCash = Number(closedShift.closing_cash || 0);
-      const difference = actualClosingCash - expectedCash;
-
-      totalDifferences += difference;
+    for (const monthShift of monthShifts) {
+      totalDifferences += Number(monthShift.opening_difference || 0);
+      if (!monthShift.active) {
+        totalDifferences += Number(monthShift.closing_difference || 0);
+      }
     }
 
     setMonthClosingDifferences(totalDifferences);
@@ -181,6 +166,29 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       supabase.removeChannel(channel);
     };
   }, [shift, loadTransactions, loadMonthTransactions, loadMonthClosingDifferences]);
+
+  useEffect(() => {
+    if (!shift) return;
+
+    const channel = supabase
+      .channel('shifts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'shifts',
+        },
+        () => {
+          loadMonthClosingDifferences();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [shift, loadMonthClosingDifferences]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

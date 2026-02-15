@@ -126,12 +126,16 @@ function App() {
       return;
     }
 
+    const openingCashValue = parseFloat(loginForm.opening_cash);
+    const openingDifference = openingCashValue - lastClosingCash;
+
     const { data: newShift, error } = await supabase
       .from('shifts')
       .insert([{
         user_id: user.id,
         user_name: user.full_name,
-        opening_cash: parseFloat(loginForm.opening_cash),
+        opening_cash: openingCashValue,
+        opening_difference: openingDifference,
         active: true
       }])
       .select()
@@ -176,19 +180,32 @@ function App() {
 
     const totalSales = sales?.reduce((sum, s) => sum + Number(s.total), 0) || 0;
 
-    const { data: expenses } = await supabase
+    const { data: transactions } = await supabase
       .from('cash_transactions')
-      .select('amount')
-      .eq('shift_id', currentShift.id)
-      .eq('type', 'expense');
+      .select('*')
+      .eq('shift_id', currentShift.id);
 
-    const totalExpenses = expenses?.reduce((sum, e) => sum + Number(e.amount), 0) || 0;
+    const cashTransactions = transactions || [];
+    const incomeCash = cashTransactions
+      .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const expenseCash = cashTransactions
+      .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const totalExpenses = cashTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const expectedCash = Number(currentShift.opening_cash) + incomeCash - expenseCash;
+    const closingDifference = closingCash - expectedCash;
 
     await supabase
       .from('shifts')
       .update({
         end_date: new Date().toISOString(),
         closing_cash: closingCash,
+        closing_difference: closingDifference,
         total_sales: totalSales,
         total_expenses: totalExpenses,
         active: false
