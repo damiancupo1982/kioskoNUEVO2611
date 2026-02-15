@@ -110,6 +110,30 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     }
   }, [shift, loadTransactions, loadMonthTransactions]);
 
+  useEffect(() => {
+    if (!shift) return;
+
+    const channel = supabase
+      .channel('cash-transactions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cash_transactions',
+        },
+        () => {
+          loadTransactions();
+          loadMonthTransactions();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [shift, loadTransactions, loadMonthTransactions]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shift) return;
