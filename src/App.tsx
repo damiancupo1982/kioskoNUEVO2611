@@ -89,6 +89,19 @@ function App() {
       return;
     }
 
+    const { data: existingActiveShift } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('active', true)
+      .maybeSingle();
+
+    if (existingActiveShift) {
+      setCurrentShift(existingActiveShift);
+      setShowLoginModal(false);
+      setLoginForm({ username: '', password: '', opening_cash: '' });
+      return;
+    }
+
     const { data: newShift, error } = await supabase
       .from('shifts')
       .insert([{
