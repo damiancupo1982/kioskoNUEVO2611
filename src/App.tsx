@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Shift, User } from './lib/supabase';
 import Dashboard from './components/Dashboard';
-import { Store, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Store, LogIn, Eye, EyeOff, DollarSign } from 'lucide-react';
 
 function App() {
   const [currentShift, setCurrentShift] = useState<Shift | null>(null);
@@ -10,6 +10,9 @@ function App() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '', opening_cash: '' });
   const [loginError, setLoginError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [lastClosingCash, setLastClosingCash] = useState(0);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
 
   useEffect(() => {
     initializeShift();
@@ -22,10 +25,11 @@ function App() {
   }, [showLoginModal]);
 
   const loadInitialCash = async () => {
-    const lastClosingCash = await getLastShiftClosingCash();
+    const closingCash = await getLastShiftClosingCash();
+    setLastClosingCash(closingCash);
     setLoginForm(prev => ({
       ...prev,
-      opening_cash: lastClosingCash.toString()
+      opening_cash: closingCash.toString()
     }));
   };
 
@@ -89,6 +93,18 @@ function App() {
       return;
     }
 
+    const openingCashValue = parseFloat(loginForm.opening_cash);
+
+    if (openingCashValue !== lastClosingCash) {
+      setPendingUser(user);
+      setShowConfirmModal(true);
+      return;
+    }
+
+    await createShift(user);
+  };
+
+  const createShift = async (user: User) => {
     const { data: existingActiveShift } = await supabase
       .from('shifts')
       .select('*')
@@ -99,6 +115,8 @@ function App() {
       setCurrentShift(existingActiveShift);
       setShowLoginModal(false);
       setLoginForm({ username: '', password: '', opening_cash: '' });
+      setShowConfirmModal(false);
+      setPendingUser(null);
       return;
     }
 
@@ -121,7 +139,24 @@ function App() {
 
     setCurrentShift(newShift);
     setShowLoginModal(false);
+    setShowConfirmModal(false);
+    setPendingUser(null);
     setLoginForm({ username: '', password: '', opening_cash: '' });
+  };
+
+  const handleConfirmDifference = () => {
+    if (pendingUser) {
+      createShift(pendingUser);
+    }
+  };
+
+  const handleCancelDifference = () => {
+    setShowConfirmModal(false);
+    setPendingUser(null);
+    setLoginForm(prev => ({
+      ...prev,
+      opening_cash: lastClosingCash.toString()
+    }));
   };
 
   const handleCloseShift = async (closingCash: number) => {
@@ -222,22 +257,25 @@ function App() {
 
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <label className="block text-sm font-semibold text-slate-700">Efectivo Inicial</label>
+                <label className="block text-sm font-semibold text-slate-700">Efectivo Inicial *</label>
                 <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-medium">
-                  Automático
+                  Sugerido: ${lastClosingCash.toFixed(2)}
                 </span>
               </div>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-semibold">$</span>
                 <input
-                  type="text"
-                  readOnly
-                  value={loginForm.opening_cash || '0.00'}
-                  className="w-full pl-8 pr-4 py-3 bg-slate-100 border-2 border-slate-300 rounded-xl text-slate-700 font-semibold cursor-not-allowed"
+                  type="number"
+                  step="0.01"
+                  required
+                  value={loginForm.opening_cash}
+                  onChange={(e) => setLoginForm({ ...loginForm, opening_cash: e.target.value })}
+                  className="w-full pl-8 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all text-slate-700 font-semibold"
+                  placeholder="0.00"
                 />
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Monto automático del cierre anterior. Para modificarlo, registra un egreso desde Caja.
+                Monto sugerido del cierre anterior. Si difiere, el sistema pedirá confirmación.
               </p>
             </div>
 
@@ -249,6 +287,67 @@ function App() {
               Iniciar Turno
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (showConfirmModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-r from-yellow-500 to-orange-600 p-6 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl mb-3">
+              <DollarSign className="text-white" size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-1">Diferencia de Efectivo</h2>
+            <p className="text-yellow-100 text-sm">Se detectó una diferencia en el monto inicial</p>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-600 font-medium">Cierre anterior:</span>
+                <span className="text-lg font-bold text-slate-800">${lastClosingCash.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-slate-600 font-medium">Monto ingresado:</span>
+                <span className="text-lg font-bold text-orange-600">${parseFloat(loginForm.opening_cash).toFixed(2)}</span>
+              </div>
+              <div className="border-t border-slate-200 pt-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600 font-medium">Diferencia:</span>
+                  <span className={`text-xl font-bold ${parseFloat(loginForm.opening_cash) < lastClosingCash ? 'text-red-600' : 'text-emerald-600'}`}>
+                    ${Math.abs(parseFloat(loginForm.opening_cash) - lastClosingCash).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4">
+              <p className="text-sm text-amber-800 text-center">
+                <strong>¿Estás seguro que deseas iniciar el turno con ${parseFloat(loginForm.opening_cash).toFixed(2)}?</strong>
+              </p>
+              <p className="text-xs text-amber-700 text-center mt-2">
+                La caja se cerró con ${lastClosingCash.toFixed(2)}. Esta diferencia quedará registrada.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelDifference}
+                className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 px-6 py-3 rounded-xl font-bold transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmDifference}
+                className="flex-1 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg transition-all"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );

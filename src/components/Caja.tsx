@@ -22,6 +22,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   const [customDateTo, setCustomDateTo] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<CashTransaction | null>(null);
   const [relatedSale, setRelatedSale] = useState<Sale | null>(null);
+  const [monthClosingDifferences, setMonthClosingDifferences] = useState(0);
   const [formData, setFormData] = useState({
     type: 'income' as 'income' | 'expense',
     category: '',
@@ -103,12 +104,58 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     setMonthTransactions(data || []);
   }, [shift]);
 
+  const loadMonthClosingDifferences = useCallback(async () => {
+    if (!shift) return;
+
+    const now = new Date();
+    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    const { data: closedShifts } = await supabase
+      .from('shifts')
+      .select('*')
+      .eq('active', false)
+      .gte('end_date', firstDayOfMonth.toISOString())
+      .lte('end_date', endOfDay.toISOString());
+
+    if (!closedShifts || closedShifts.length === 0) {
+      setMonthClosingDifferences(0);
+      return;
+    }
+
+    let totalDifferences = 0;
+
+    for (const closedShift of closedShifts) {
+      const { data: shiftTransactions } = await supabase
+        .from('cash_transactions')
+        .select('*')
+        .eq('shift_id', closedShift.id);
+
+      const cashTransactions = (shiftTransactions || []) as CashTransaction[];
+      const incomeCash = cashTransactions
+        .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+      const expenseCash = cashTransactions
+        .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+      const expectedCash = Number(closedShift.opening_cash) + incomeCash - expenseCash;
+      const actualClosingCash = Number(closedShift.closing_cash || 0);
+      const difference = actualClosingCash - expectedCash;
+
+      totalDifferences += difference;
+    }
+
+    setMonthClosingDifferences(totalDifferences);
+  }, [shift]);
+
   useEffect(() => {
     if (shift) {
       loadTransactions();
       loadMonthTransactions();
+      loadMonthClosingDifferences();
     }
-  }, [shift, loadTransactions, loadMonthTransactions]);
+  }, [shift, loadTransactions, loadMonthTransactions, loadMonthClosingDifferences]);
 
   useEffect(() => {
     if (!shift) return;
@@ -125,6 +172,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
         () => {
           loadTransactions();
           loadMonthTransactions();
+          loadMonthClosingDifferences();
         }
       )
       .subscribe();
@@ -132,7 +180,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [shift, loadTransactions, loadMonthTransactions]);
+  }, [shift, loadTransactions, loadMonthTransactions, loadMonthClosingDifferences]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -525,6 +573,9 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
             <p className="text-2xl font-bold text-emerald-600">${cashInBox.toFixed(2)}</p>
             <p className="text-xs text-slate-500 mt-1">
               Ingresos - egresos en efectivo
+            </p>
+            <p className={`text-[10px] font-medium mt-1 ${monthClosingDifferences >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              Dif de cierres: ${monthClosingDifferences >= 0 ? '+' : ''}{monthClosingDifferences.toFixed(2)}
             </p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
