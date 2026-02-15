@@ -93,10 +93,16 @@ function App() {
       return;
     }
 
-    const openingCashValue = parseFloat(loginForm.opening_cash);
+    const openingCashValue = parseFloat(loginForm.opening_cash || '0');
+
+    if (isNaN(openingCashValue)) {
+      setLoginError('Monto de efectivo inicial inválido');
+      return;
+    }
 
     if (openingCashValue !== lastClosingCash) {
       setPendingUser(user);
+      setShowLoginModal(false);
       setShowConfirmModal(true);
       return;
     }
@@ -153,6 +159,7 @@ function App() {
   const handleCancelDifference = () => {
     setShowConfirmModal(false);
     setPendingUser(null);
+    setShowLoginModal(true);
     setLoginForm(prev => ({
       ...prev,
       opening_cash: lastClosingCash.toString()
