@@ -337,13 +337,13 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   };
 
   // Transacciones solo del turno actual (para cálculos de arqueo)
-  const currentShiftTransactions = transactions.filter(t => t.shift_id === shift?.id);
+  const currentShiftTransactions = monthTransactions.filter(t => t.shift_id === shift?.id);
 
-  // Totales generales SOLO del turno actual
-  const totalIncome = currentShiftTransactions
+  // Totales del período filtrado
+  const totalIncome = transactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const totalExpense = currentShiftTransactions
+  const totalExpense = transactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
@@ -357,42 +357,60 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const monthBalance = monthIncome - monthExpense;
 
-  // Saldos por método de pago SOLO del turno actual
-  const incomeCash = currentShiftTransactions
+  // Saldos por método de pago del período filtrado
+  const incomeCash = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseCash = currentShiftTransactions
+  const expenseCash = transactions
     .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const cashInBox = incomeCash - expenseCash;
 
-  const incomeTransfer = currentShiftTransactions
+  const incomeTransfer = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'transferencia')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseTransfer = currentShiftTransactions
+  const expenseTransfer = transactions
     .filter(t => t.type === 'expense' && t.payment_method === 'transferencia')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const transferInBox = incomeTransfer - expenseTransfer;
 
-  const incomeQr = currentShiftTransactions
+  const incomeQr = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'qr')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseQr = currentShiftTransactions
+  const expenseQr = transactions
     .filter(t => t.type === 'expense' && t.payment_method === 'qr')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const qrInBox = incomeQr - expenseQr;
 
-  const incomeExpensas = currentShiftTransactions
+  const incomeExpensas = transactions
     .filter(t => t.type === 'income' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
-  const expenseExpensas = currentShiftTransactions
+  const expenseExpensas = transactions
     .filter(t => t.type === 'expense' && t.payment_method === 'expensas')
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const expensasInBox = incomeExpensas - expenseExpensas;
 
-  // Efectivo esperado para cierre de turno
+  // Efectivo esperado para cierre de turno (basado en turno actual)
   const openingCash = Number(shift?.opening_cash || 0);
-  const expectedCash = openingCash + incomeCash - expenseCash;
+  const shiftIncomeCash = currentShiftTransactions
+    .filter(t => t.type === 'income' && t.payment_method === 'efectivo')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const shiftExpenseCash = currentShiftTransactions
+    .filter(t => t.type === 'expense' && t.payment_method === 'efectivo')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const expectedCash = openingCash + shiftIncomeCash - shiftExpenseCash;
+
+  const getPeriodLabel = () => {
+    switch (selectedPeriod) {
+      case 'today': return 'Hoy';
+      case 'week': return 'Esta Semana';
+      case 'month': return 'Este Mes';
+      case 'previous_month': return 'Mes Anterior';
+      case 'custom': return 'Personalizado';
+      case 'all': return 'Todo';
+      default: return 'Filtrado';
+    }
+  };
 
   if (!shift) {
     return (
@@ -453,7 +471,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </div>
           <div className="space-y-1">
             <div>
-              <p className="text-[10px] text-emerald-100">Turno</p>
+              <p className="text-[10px] text-emerald-100">{getPeriodLabel()}</p>
               <p className="text-xl font-bold">${totalIncome.toFixed(2)}</p>
             </div>
             <div>
@@ -470,7 +488,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </div>
           <div className="space-y-1">
             <div>
-              <p className="text-[10px] text-red-100">Turno</p>
+              <p className="text-[10px] text-red-100">{getPeriodLabel()}</p>
               <p className="text-xl font-bold">${totalExpense.toFixed(2)}</p>
             </div>
             <div>
@@ -487,7 +505,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
           </div>
           <div className="space-y-1">
             <div>
-              <p className="text-[10px] text-blue-100">Turno</p>
+              <p className="text-[10px] text-blue-100">{getPeriodLabel()}</p>
               <p className="text-xl font-bold">${balance.toFixed(2)}</p>
             </div>
             <div>
@@ -500,7 +518,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
 
       {/* Facturación por método de pago */}
       <div>
-        <h3 className="text-lg font-bold text-slate-800 mb-3">FACTURACIÓN DEL TURNO ACTUAL</h3>
+        <h3 className="text-lg font-bold text-slate-800 mb-3">FACTURACIÓN - {getPeriodLabel().toUpperCase()}</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
             <p className="text-sm font-semibold text-slate-600">Efectivo</p>
