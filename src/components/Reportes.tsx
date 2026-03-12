@@ -18,11 +18,14 @@ export default function Reportes() {
   const [dateFilter, setDateFilter] = useState('today');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [config, setConfig] = useState<Configuration | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
 
   useEffect(() => {
     loadData();
     loadConfig();
-  }, [dateFilter]);
+  }, [dateFilter, customDateFrom, customDateTo]);
 
   const loadConfig = async () => {
     const { data } = await supabase
@@ -63,6 +66,19 @@ export default function Reportes() {
       const from = daysAgo30.toISOString();
       salesQuery = salesQuery.gte('created_at', from);
       cashQuery = cashQuery.gte('created_at', from);
+    } else if (dateFilter === 'lastMonth') {
+      const now = new Date();
+      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      salesQuery = salesQuery.gte('created_at', firstDayLastMonth.toISOString()).lte('created_at', lastDayLastMonth.toISOString());
+      cashQuery = cashQuery.gte('created_at', firstDayLastMonth.toISOString()).lte('created_at', lastDayLastMonth.toISOString());
+    } else if (dateFilter === 'custom' && customDateFrom && customDateTo) {
+      const fromDate = new Date(customDateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(customDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      salesQuery = salesQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
+      cashQuery = cashQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
     }
 
     const [{ data: salesData }, { data: cashData }] = await Promise.all([
@@ -543,6 +559,16 @@ export default function Reportes() {
             Este Mes
           </button>
           <button
+            onClick={() => setDateFilter('lastMonth')}
+            className={`px-5 py-2 rounded-lg font-medium transition-all ${
+              dateFilter === 'lastMonth'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Mes Anterior
+          </button>
+          <button
             onClick={() => setDateFilter('all')}
             className={`px-5 py-2 rounded-lg font-medium transition-all ${
               dateFilter === 'all'
@@ -551,6 +577,17 @@ export default function Reportes() {
             }`}
           >
             Todo
+          </button>
+          <button
+            onClick={() => setShowDatePicker(!showDatePicker)}
+            className={`px-5 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+              dateFilter === 'custom'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            <Calendar size={18} />
+            Personalizado
           </button>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -570,6 +607,66 @@ export default function Reportes() {
           </button>
         </div>
       </div>
+
+      {showDatePicker && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h4 className="text-lg font-bold text-slate-800 mb-4">Seleccionar Rango de Fechas</h4>
+          <div className="flex gap-4 flex-wrap items-end">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Desde
+              </label>
+              <input
+                type="date"
+                value={customDateFrom}
+                onChange={(e) => setCustomDateFrom(e.target.value)}
+                className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Hasta
+              </label>
+              <input
+                type="date"
+                value={customDateTo}
+                onChange={(e) => setCustomDateTo(e.target.value)}
+                className="px-4 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <button
+              onClick={() => {
+                if (customDateFrom && customDateTo) {
+                  setDateFilter('custom');
+                  setShowDatePicker(false);
+                }
+              }}
+              disabled={!customDateFrom || !customDateTo}
+              className="px-6 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all"
+            >
+              Aplicar
+            </button>
+            <button
+              onClick={() => {
+                setShowDatePicker(false);
+                setCustomDateFrom('');
+                setCustomDateTo('');
+                if (dateFilter === 'custom') {
+                  setDateFilter('today');
+                }
+              }}
+              className="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-medium transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+          {customDateFrom && customDateTo && dateFilter === 'custom' && (
+            <p className="mt-4 text-sm text-slate-600">
+              Mostrando desde {new Date(customDateFrom).toLocaleDateString('es-AR')} hasta {new Date(customDateTo).toLocaleDateString('es-AR')}
+            </p>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8">Cargando...</div>
