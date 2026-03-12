@@ -511,20 +511,49 @@ export default function Reportes() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
-        <h3 className="text-xl font-bold text-slate-800">
-          Resumen de Ventas
-        </h3>
         <div className="flex gap-2 flex-wrap">
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 bg-white border-2 border-slate-200 rounded-xl font-medium focus:ring-2 focus:ring-orange-500"
+          <button
+            onClick={() => setDateFilter('today')}
+            className={`px-5 py-2 rounded-lg font-medium transition-all ${
+              dateFilter === 'today'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
           >
-            <option value="today">Hoy</option>
-            <option value="week">Última Semana</option>
-            <option value="month">Último Mes</option>
-            <option value="all">Todo</option>
-          </select>
+            Hoy
+          </button>
+          <button
+            onClick={() => setDateFilter('week')}
+            className={`px-5 py-2 rounded-lg font-medium transition-all ${
+              dateFilter === 'week'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Esta Semana
+          </button>
+          <button
+            onClick={() => setDateFilter('month')}
+            className={`px-5 py-2 rounded-lg font-medium transition-all ${
+              dateFilter === 'month'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Este Mes
+          </button>
+          <button
+            onClick={() => setDateFilter('all')}
+            className={`px-5 py-2 rounded-lg font-medium transition-all ${
+              dateFilter === 'all'
+                ? 'bg-blue-500 text-white shadow-lg'
+                : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+            }`}
+          >
+            Todo
+          </button>
+        </div>
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={exportToCSV}
             className="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl flex items-center gap-2 font-medium shadow-lg transition-all"
