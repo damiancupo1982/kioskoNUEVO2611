@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity } from 'lucide-react';
+import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag } from 'lucide-react';
 import { Shift, supabase, CashTransaction } from '../lib/supabase';
 import Ventas from './Ventas';
 import Stock from './Stock';
@@ -7,8 +7,9 @@ import Caja from './Caja';
 import Reportes from './Reportes';
 import Configuracion from './Configuracion';
 import InventoryMovements from './InventoryMovements';
+import Compras from './Compras';
 
-type View = 'ventas' | 'stock' | 'caja' | 'movimientos' | 'reportes' | 'configuracion';
+type View = 'ventas' | 'stock' | 'caja' | 'movimientos' | 'reportes' | 'configuracion' | 'compras';
 
 interface DashboardProps {
   shift: Shift | null;
@@ -199,8 +200,9 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
   const menuItems = [
     { id: 'ventas' as View, label: 'Ventas', icon: ShoppingCart, color: 'from-emerald-500 to-teal-600' },
     { id: 'stock' as View, label: 'Inventario', icon: Package, color: 'from-blue-500 to-cyan-600' },
-    { id: 'movimientos' as View, label: 'Movimientos', icon: TrendingUp, color: 'from-indigo-500 to-blue-600' },
-    { id: 'caja' as View, label: 'Caja', icon: Wallet, color: 'from-purple-500 to-pink-600' },
+    { id: 'movimientos' as View, label: 'Movimientos', icon: TrendingUp, color: 'from-blue-600 to-blue-700' },
+    { id: 'compras' as View, label: 'Compras', icon: ShoppingBag, color: 'from-amber-500 to-orange-600' },
+    { id: 'caja' as View, label: 'Caja', icon: Wallet, color: 'from-slate-500 to-slate-600' },
     { id: 'reportes' as View, label: 'Reportes', icon: BarChart3, color: 'from-orange-500 to-red-600' },
     { id: 'configuracion' as View, label: 'Configuración', icon: Settings, color: 'from-gray-500 to-slate-600' },
   ];
@@ -367,6 +369,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 {currentView === 'ventas' && <Ventas shift={shift} />}
                 {currentView === 'stock' && <Stock />}
                 {currentView === 'movimientos' && <InventoryMovements />}
+                {currentView === 'compras' && <Compras />}
                 {currentView === 'caja' && <Caja shift={shift} onCloseShift={onCloseShift} />}
                 {currentView === 'reportes' && <Reportes />}
                 {currentView === 'configuracion' && <Configuracion />}
