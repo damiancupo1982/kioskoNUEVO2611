@@ -251,7 +251,6 @@ export default function Compras() {
         stock: newStock,
         cost: item.purchase_price,
         price: item.sale_price,
-        supplier: supplier.trim(),
       }).eq('id', item.product_id);
 
       await supabase.from('inventory_movements').insert([{
