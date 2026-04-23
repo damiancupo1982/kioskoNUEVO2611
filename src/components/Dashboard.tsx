@@ -222,7 +222,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
                   {businessName}
                 </h1>
-                <p className="text-sm text-slate-600">Sistema de Gestión POS</p>
+                <p className="text-sm text-slate-600">https://github.com/damiancupo1982/kioskoNUEVO2611</p>
               </div>
             </div>
             <div className="flex items-center gap-6">
