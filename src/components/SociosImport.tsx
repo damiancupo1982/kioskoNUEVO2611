@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { Upload, X, Check, AlertCircle, FileSpreadsheet, ChevronRight, Loader2, Info, Edit2 } from 'lucide-react';
+import { Upload, X, Check, AlertCircle, FileSpreadsheet, ChevronRight, Loader2, Info, CreditCard as Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Neighborhood, MemberCategory } from '../lib/supabase';
 
@@ -767,6 +767,3 @@ export default function SociosImport({ neighborhoods: initialNeighborhoods, exis
     </div>
   );
 }
-
-
-export default SociosImport
