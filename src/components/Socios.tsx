@@ -333,7 +333,118 @@ export default function Socios() {
     exportCSV(rows, 'liquidacion_socios.csv');
   };
 
-  const printView = () => window.print();
+  const printReport = () => {
+    const title = 'Reporte de Socios';
+    const filterDesc = [
+      reportFilter === 'titular' ? 'Solo titulares' : reportFilter === 'familiar' ? 'Solo familiares' : reportFilter === 'adherente' ? 'Solo adherentes' : 'Todos',
+      reportNeighborhood ? `Barrio: ${getNeighborhoodName(reportNeighborhood)}` : '',
+      reportStatus ? `Estado: ${reportStatus}` : '',
+    ].filter(Boolean).join(' | ');
+
+    const rows = sortedReport.map(m => `
+      <tr>
+        <td>${getNeighborhoodName(m.neighborhood_id)}</td>
+        <td>${m.lot_number}</td>
+        <td>${m.last_name}</td>
+        <td>${m.first_name}</td>
+        <td>${m.dni || '-'}</td>
+        <td>${m.phone || '-'}</td>
+        <td>${m.email || '-'}</td>
+        <td>${CATEGORY_LABELS[m.category]}</td>
+        <td class="${m.carnet_status === 'activo' ? 'status-active' : 'status-paused'}">${m.carnet_status === 'activo' ? 'Activo' : 'Pausado'}</td>
+      </tr>`).join('');
+
+    openPrintWindow(title, filterDesc, `
+      <table>
+        <thead>
+          <tr>
+            <th>Barrio</th><th>Lote</th><th>Apellido</th><th>Nombre</th>
+            <th>DNI</th><th>Teléfono</th><th>Email</th><th>Categoría</th><th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="9" class="total-row">${sortedReport.length} socios</td></tr>
+        </tfoot>
+      </table>`);
+  };
+
+  const printLiquidacion = () => {
+    const title = 'Liquidación de Carnets';
+    const filterDesc = liqNeighborhood ? `Barrio: ${getNeighborhoodName(liqNeighborhood)}` : 'Todos los barrios';
+
+    const rows = liqLots.map(g => {
+      const amount = prices ? calcLotAmount(g.members, prices) : 0;
+      const active = g.members.filter(m => m.carnet_status === 'activo');
+      const hasFamiliar = active.some(m => ['familiar_1', 'familiar_2', 'familiar_3'].includes(m.category));
+      const adherentCount = active.filter(m => m.category === 'adherente').length;
+      const typeLabel = hasFamiliar ? 'Familiar' : 'Individual';
+      const detalle = `${typeLabel}${adherentCount > 0 ? ` + ${adherentCount} adherente${adherentCount > 1 ? 's' : ''}` : ''}`;
+      return `<tr><td>${g.neighborhood_name}</td><td>${g.lot_number}</td><td>${detalle}</td><td class="amount">$${amount.toFixed(2)}</td></tr>`;
+    }).join('');
+
+    openPrintWindow(title, filterDesc, `
+      <table>
+        <thead>
+          <tr><th>Barrio</th><th>Lote</th><th>Detalle</th><th>Monto</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+        <tfoot>
+          <tr><td colspan="3" class="total-row"><strong>Total</strong></td><td class="amount total-row"><strong>$${liqTotal.toFixed(2)}</strong></td></tr>
+        </tfoot>
+      </table>`);
+  };
+
+  const openPrintWindow = (title: string, subtitle: string, tableHtml: string) => {
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) return;
+    const date = new Date().toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    w.document.write(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>${title}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 11px; color: #1e293b; padding: 24px; }
+    .header { border-bottom: 2px solid #059669; padding-bottom: 12px; margin-bottom: 16px; }
+    .header h1 { font-size: 18px; font-weight: 700; color: #065f46; }
+    .header .meta { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4px; }
+    .header .subtitle { font-size: 11px; color: #64748b; }
+    .header .date { font-size: 11px; color: #64748b; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    thead tr { background: #065f46; color: #fff; }
+    thead th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: #f1f5f9; }
+    tbody td { padding: 7px 10px; border-bottom: 1px solid #e2e8f0; }
+    tfoot td { padding: 8px 10px; background: #f1f5f9; font-size: 11px; color: #475569; border-top: 2px solid #cbd5e1; }
+    .total-row { font-weight: 600; color: #065f46; }
+    .amount { text-align: right; font-weight: 600; }
+    .status-active { color: #059669; font-weight: 600; }
+    .status-paused { color: #d97706; font-weight: 600; }
+    .footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+    @media print {
+      body { padding: 12px; }
+      @page { margin: 1.5cm; size: A4 landscape; }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${title}</h1>
+    <div class="meta">
+      <span class="subtitle">${subtitle}</span>
+      <span class="date">Generado el ${date}</span>
+    </div>
+  </div>
+  ${tableHtml}
+  <div class="footer">Documento generado automáticamente</div>
+  <script>window.onload = () => { window.print(); }</script>
+</body>
+</html>`);
+    w.document.close();
+  };
 
   if (loading) {
     return (
@@ -475,7 +586,7 @@ export default function Socios() {
               <button onClick={exportReportCSV} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
                 <Download size={14} /> CSV
               </button>
-              <button onClick={printView} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
+              <button onClick={printReport} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
                 <Printer size={14} /> Imprimir
               </button>
             </div>
@@ -556,7 +667,7 @@ export default function Socios() {
               <button onClick={exportLiqCSV} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
                 <Download size={14} /> CSV
               </button>
-              <button onClick={printView} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
+              <button onClick={printLiquidacion} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-lg hover:bg-slate-200 text-sm font-medium transition-colors">
                 <Printer size={14} /> Imprimir
               </button>
             </div>
