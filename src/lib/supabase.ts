@@ -121,6 +121,7 @@ export interface Member {
   email: string;
   category: MemberCategory;
   carnet_status: CarnetStatus;
+  tenis: boolean;
   created_at: string;
   updated_at: string;
   neighborhood?: Neighborhood;

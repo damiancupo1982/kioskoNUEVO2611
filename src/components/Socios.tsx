@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Plus, Search, Filter, FileText, DollarSign, Settings, CreditCard as Edit2, Trash2, UserPlus, X, Check, ChevronDown, Download, Printer, PauseCircle, PlayCircle, AlertCircle } from 'lucide-react';
+import { Users, Plus, Search, Filter, FileText, DollarSign, Settings, CreditCard as Edit2, Trash2, UserPlus, X, Check, ChevronDown, Download, Printer, PauseCircle, PlayCircle, AlertCircle, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Member, Neighborhood, CarnetPrices, MemberCategory, CarnetStatus } from '../lib/supabase';
+import SociosImport from './SociosImport';
 
 type View = 'list' | 'report' | 'liquidacion' | 'prices';
 
@@ -75,6 +76,7 @@ export default function Socios() {
   const [filterStatus, setFilterStatus] = useState('');
 
   // Modals
+  const [showImport, setShowImport] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [formData, setFormData] = useState<MemberFormData>(emptyForm());
@@ -479,6 +481,9 @@ export default function Socios() {
           <div className="flex flex-wrap gap-3 items-center">
             <button onClick={() => openAddMember()} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm font-medium">
               <Plus size={16} /> Agregar Socio
+            </button>
+            <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors text-sm font-medium">
+              <FileSpreadsheet size={16} /> Importar desde Excel
             </button>
           </div>
 
@@ -900,6 +905,23 @@ export default function Socios() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ===== IMPORT MODAL ===== */}
+      {showImport && (
+        <SociosImport
+          neighborhoods={neighborhoods}
+          existingMembers={members.map(m => ({
+            lot_number: m.lot_number,
+            neighborhood_id: m.neighborhood_id,
+            category: m.category,
+            first_name: m.first_name,
+            last_name: m.last_name,
+            dni: m.dni,
+          }))}
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); loadData(); }}
+        />
       )}
     </div>
   );
