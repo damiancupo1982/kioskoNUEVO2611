@@ -515,13 +515,76 @@ export default function Socios() {
             </div>
           </div>
 
-          {/* Summary */}
-          <div className="flex gap-4 text-sm text-slate-500">
-            <span className="font-medium text-slate-700">{filteredMembers.length} socios</span>
-            <span>{lotGroups.length} lotes</span>
-            <span className="text-emerald-600">{filteredMembers.filter(m => m.carnet_status === 'activo').length} activos</span>
-            <span className="text-amber-600">{filteredMembers.filter(m => m.carnet_status === 'pausado').length} pausados</span>
-          </div>
+          {/* Stats cards */}
+          {(() => {
+            const activeMembers = members.filter(m => m.carnet_status === 'activo');
+            const activeLots = Array.from(new Set(activeMembers.map(m => `${m.neighborhood_id}|${m.lot_number}`)));
+
+            // Individual carnets: lots with only titular (no familiar 1/2/3)
+            const individualLots = activeLots.filter(key => {
+              const [nbId, lot] = key.split('|');
+              const lotMembers = activeMembers.filter(m => m.neighborhood_id === (nbId || null) && m.lot_number === lot);
+              return !lotMembers.some(m => ['familiar_1', 'familiar_2', 'familiar_3'].includes(m.category));
+            });
+
+            // Family carnets: lots with at least one familiar 1/2/3
+            const familyLots = activeLots.filter(key => {
+              const [nbId, lot] = key.split('|');
+              const lotMembers = activeMembers.filter(m => m.neighborhood_id === (nbId || null) && m.lot_number === lot);
+              return lotMembers.some(m => ['familiar_1', 'familiar_2', 'familiar_3'].includes(m.category));
+            });
+
+            // Total to liquidate
+            const totalLiquidar = prices
+              ? Array.from(new Set(members.map(m => `${m.neighborhood_id}|${m.lot_number}`))).reduce((sum, key) => {
+                  const [nbId, lot] = key.split('|');
+                  const lotMembers = members.filter(m => m.neighborhood_id === (nbId || null) && m.lot_number === lot);
+                  return sum + calcLotAmount(lotMembers, prices);
+                }, 0)
+              : 0;
+
+            return (
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wide">
+                    <Users size={13} /> Socios totales
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{members.length}</p>
+                  <p className="text-xs text-slate-400">{activeMembers.length} activos · {members.filter(m => m.carnet_status === 'pausado').length} pausados</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wide">
+                    <FileText size={13} /> Carnets totales
+                  </div>
+                  <p className="text-3xl font-bold text-slate-800">{activeLots.length}</p>
+                  <p className="text-xs text-slate-400">lotes con carnets activos</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wide">
+                    <UserPlus size={13} /> Carnet individual
+                  </div>
+                  <p className="text-3xl font-bold text-blue-700">{individualLots.length}</p>
+                  <p className="text-xs text-slate-400">solo titular activo</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4 flex flex-col gap-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-slate-500 text-xs font-medium uppercase tracking-wide">
+                    <Users size={13} /> Carnet familiar
+                  </div>
+                  <p className="text-3xl font-bold text-emerald-700">{familyLots.length}</p>
+                  <p className="text-xs text-slate-400">con familiares activos</p>
+                </div>
+                <div className="bg-white border border-emerald-200 rounded-xl p-4 flex flex-col gap-1 shadow-sm">
+                  <div className="flex items-center gap-2 text-emerald-600 text-xs font-medium uppercase tracking-wide">
+                    <DollarSign size={13} /> Total a liquidar
+                  </div>
+                  <p className="text-3xl font-bold text-emerald-700">
+                    ${prices ? totalLiquidar.toLocaleString('es-AR') : '-'}
+                  </p>
+                  <p className="text-xs text-slate-400">{prices ? 'todos los lotes activos' : 'configurar precios'}</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Lot groups */}
           {lotGroups.length === 0 ? (
