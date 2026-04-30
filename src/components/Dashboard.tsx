@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag } from 'lucide-react';
+import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag, UserCheck } from 'lucide-react';
 import { Shift, supabase, CashTransaction } from '../lib/supabase';
 import Ventas from './Ventas';
 import Stock from './Stock';
@@ -8,8 +8,9 @@ import Reportes from './Reportes';
 import Configuracion from './Configuracion';
 import InventoryMovements from './InventoryMovements';
 import Compras from './Compras';
+import Socios from './Socios';
 
-type View = 'ventas' | 'stock' | 'caja' | 'movimientos' | 'reportes' | 'configuracion' | 'compras';
+type View = 'ventas' | 'stock' | 'caja' | 'movimientos' | 'reportes' | 'configuracion' | 'compras' | 'socios';
 
 interface DashboardProps {
   shift: Shift | null;
@@ -204,6 +205,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
     { id: 'compras' as View, label: 'Compras', icon: ShoppingBag, color: 'from-amber-500 to-orange-600' },
     { id: 'caja' as View, label: 'Caja', icon: Wallet, color: 'from-slate-500 to-slate-600' },
     { id: 'reportes' as View, label: 'Reportes', icon: BarChart3, color: 'from-orange-500 to-red-600' },
+    { id: 'socios' as View, label: 'Socios', icon: UserCheck, color: 'from-teal-500 to-emerald-600' },
     { id: 'configuracion' as View, label: 'Configuración', icon: Settings, color: 'from-gray-500 to-slate-600' },
   ];
 
@@ -372,6 +374,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 {currentView === 'compras' && <Compras />}
                 {currentView === 'caja' && <Caja shift={shift} onCloseShift={onCloseShift} />}
                 {currentView === 'reportes' && <Reportes />}
+                {currentView === 'socios' && <Socios />}
                 {currentView === 'configuracion' && <Configuracion />}
               </div>
             </div>

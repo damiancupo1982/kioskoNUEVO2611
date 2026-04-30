@@ -91,3 +91,37 @@ export interface Configuration {
   receipt_message: string;
   updated_at: string;
 }
+
+export interface Neighborhood {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
+}
+
+export interface CarnetPrices {
+  id: string;
+  individual_price: number;
+  family_price: number;
+  adherent_extra_price: number;
+  updated_at: string;
+}
+
+export type MemberCategory = 'titular' | 'familiar_1' | 'familiar_2' | 'familiar_3' | 'adherente';
+export type CarnetStatus = 'activo' | 'pausado';
+
+export interface Member {
+  id: string;
+  lot_number: string;
+  neighborhood_id: string | null;
+  first_name: string;
+  last_name: string;
+  dni: string;
+  phone: string;
+  email: string;
+  category: MemberCategory;
+  carnet_status: CarnetStatus;
+  created_at: string;
+  updated_at: string;
+  neighborhood?: Neighborhood;
+}
