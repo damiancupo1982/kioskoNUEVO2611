@@ -284,7 +284,10 @@ export default function Socios() {
   };
 
   const lotGroups = buildLotGroups(filteredMembers);
-  lotGroups.sort((a, b) => a.neighborhood_name.localeCompare(b.neighborhood_name) || a.lot_number.localeCompare(b.lot_number));
+  lotGroups.sort((a, b) =>
+    a.neighborhood_name.localeCompare(b.neighborhood_name) ||
+    (parseInt(a.lot_number) || 0) - (parseInt(b.lot_number) || 0)
+  );
 
   // ---- Report ----
   const reportMembers = members.filter(m => {
@@ -448,6 +451,21 @@ export default function Socios() {
     w.document.close();
   };
 
+  const exportSociosCSV = () => {
+    const sorted = [...members].sort((a, b) =>
+      getNeighborhoodName(a.neighborhood_id).localeCompare(getNeighborhoodName(b.neighborhood_id)) ||
+      (parseInt(a.lot_number) || 0) - (parseInt(b.lot_number) || 0) ||
+      CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category)
+    );
+    const rows: string[][] = [['Barrio', 'Lote', 'Categoría', 'Apellido', 'Nombre', 'DNI', 'Teléfono', 'Email', 'Estado', 'Tenis']];
+    sorted.forEach(m => rows.push([
+      getNeighborhoodName(m.neighborhood_id), m.lot_number, CATEGORY_LABELS[m.category],
+      m.last_name, m.first_name, m.dni || '', m.phone || '', m.email || '',
+      m.carnet_status, m.tenis ? 'SI' : 'NO',
+    ]));
+    exportCSV(rows, `socios_${new Date().toISOString().slice(0, 10)}.csv`);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -484,6 +502,9 @@ export default function Socios() {
             </button>
             <button onClick={() => setShowImport(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 transition-colors text-sm font-medium">
               <FileSpreadsheet size={16} /> Importar desde Excel
+            </button>
+            <button onClick={exportSociosCSV} className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium">
+              <Download size={16} /> Exportar CSV
             </button>
           </div>
 
