@@ -169,7 +169,7 @@ export default function Compras() {
       alert('Ingrese valores válidos');
       return;
     }
-    const subtotal = qty * pp;
+    const subtotal = Math.round(qty * pp * 100) / 100;
     const item: PurchaseItem = {
       tempId: Date.now().toString(),
       product_id: currentItem.product_id,
@@ -212,7 +212,7 @@ export default function Compras() {
       .insert([{
         invoice_number: invoiceNumber,
         supplier: supplier.trim(),
-        total: getTotalPurchase(),
+        total: Math.round(getTotalPurchase() * 100) / 100,
         paid_amount: 0,
         status: 'pending',
       }])
