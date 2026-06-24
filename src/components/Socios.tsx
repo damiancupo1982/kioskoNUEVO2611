@@ -272,7 +272,7 @@ export default function Socios() {
   const buildLotGroups = (list: Member[]): LotGroup[] => {
     const map = new Map<string, LotGroup>();
     list.forEach(m => {
-      const key = m.lot_number;
+      const key = `${m.neighborhood_id ?? ''}|${m.lot_number}`;
       if (!map.has(key)) {
         map.set(key, {
           lot_number: m.lot_number,
@@ -621,7 +621,7 @@ export default function Socios() {
           ) : (
             <div className="space-y-4">
               {lotGroups.map(group => (
-                <div key={group.lot_number} className="border border-slate-200 rounded-xl overflow-hidden">
+                <div key={`${group.neighborhood_id ?? ''}|${group.lot_number}`} className="border border-slate-200 rounded-xl overflow-hidden">
                   <div className="bg-slate-50 px-4 py-3 flex items-center justify-between border-b border-slate-200">
                     <div className="flex items-center gap-3">
                       <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-lg">Lote {group.lot_number}</span>
@@ -806,7 +806,7 @@ export default function Socios() {
                   const adherentCount = active.filter(m => m.category === 'adherente').length;
                   const typeLabel = hasFamiliar ? 'Familiar' : 'Individual';
                   return (
-                    <tr key={g.lot_number} className="hover:bg-slate-50 transition-colors">
+                    <tr key={`${g.neighborhood_id ?? ''}|${g.lot_number}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 text-slate-700">{g.neighborhood_name}</td>
                       <td className="px-4 py-3 font-medium text-slate-800">{g.lot_number}</td>
                       <td className="px-4 py-3 text-slate-500 text-xs">
