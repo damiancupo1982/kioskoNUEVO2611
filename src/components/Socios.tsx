@@ -124,23 +124,27 @@ export default function Socios() {
     return neighborhoods.find(n => n.id === id)?.name || '-';
   };
 
-  const getLotMembers = (lotNumber: string) =>
-    members.filter(m => m.lot_number === lotNumber);
+  const getLotMembers = (lotNumber: string, neighborhoodId?: string) =>
+    members.filter(m =>
+      m.lot_number === lotNumber &&
+      (neighborhoodId === undefined || m.neighborhood_id === (neighborhoodId || null))
+    );
 
-  const suggestCategory = (lotNumber: string): MemberCategory => {
-    const lot = getLotMembers(lotNumber);
+  const suggestCategory = (lotNumber: string, neighborhoodId: string): MemberCategory => {
+    const lot = getLotMembers(lotNumber, neighborhoodId);
     if (!lot.some(m => m.category === 'familiar_1')) return 'familiar_1';
     if (!lot.some(m => m.category === 'familiar_2')) return 'familiar_2';
     if (!lot.some(m => m.category === 'familiar_3')) return 'familiar_3';
     return 'adherente';
   };
 
-  const openAddMember = (prefillLot?: string) => {
+  const openAddMember = (prefillLot?: string, prefillNeighborhood?: string) => {
     const f = emptyForm();
     if (prefillLot) {
       f.lot_number = prefillLot;
-      f.category = suggestCategory(prefillLot);
-      const titMember = getLotMembers(prefillLot).find(m => m.category === 'titular');
+      if (prefillNeighborhood) f.neighborhood_id = prefillNeighborhood;
+      f.category = suggestCategory(prefillLot, prefillNeighborhood || '');
+      const titMember = getLotMembers(prefillLot, prefillNeighborhood).find(m => m.category === 'titular');
       if (titMember) f.neighborhood_id = titMember.neighborhood_id || '';
     }
     setFormData(f);
@@ -172,7 +176,7 @@ export default function Socios() {
     if (!formData.last_name.trim()) return 'El apellido es obligatorio.';
     if (!formData.neighborhood_id) return 'Selecciona un barrio.';
 
-    const lotMembers = getLotMembers(formData.lot_number).filter(m => !editingMember || m.id !== editingMember.id);
+    const lotMembers = getLotMembers(formData.lot_number, formData.neighborhood_id).filter(m => !editingMember || m.id !== editingMember.id);
 
     if (formData.category === 'titular' && lotMembers.some(m => m.category === 'titular'))
       return 'Este lote ya tiene un Titular.';
@@ -623,7 +627,7 @@ export default function Socios() {
                       <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-1 rounded-lg">Lote {group.lot_number}</span>
                       <span className="text-sm text-slate-600">{group.neighborhood_name}</span>
                     </div>
-                    <button onClick={() => openAddMember(group.lot_number)} className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors border border-emerald-200">
+                    <button onClick={() => openAddMember(group.lot_number, group.neighborhood_id || '')} className="flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors border border-emerald-200">
                       <UserPlus size={13} /> Agregar Familiar
                     </button>
                   </div>
