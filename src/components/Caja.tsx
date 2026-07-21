@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, Shift, CashTransaction, Sale } from '../lib/supabase';
 import { Wallet, Plus, DollarSign, TrendingUp, TrendingDown, LogOut, Clock, Calendar, X, Download, ShoppingCart } from 'lucide-react';
+import { startOfDayAR, endOfDayAR, startOfWeekAR, startOfMonthAR, startOfPrevMonthAR, endOfPrevMonthAR, parseDateInputAR } from '../lib/argentinaTime';
 
 interface CajaProps {
   shift: Shift | null;
@@ -32,38 +33,20 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   });
 
   const getDateRange = useCallback(() => {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const endOfDay = endOfDayAR();
 
     switch (selectedPeriod) {
       case 'today':
-        return { from: startOfDay, to: endOfDay };
-      case 'week': {
-        const dayOfWeek = startOfDay.getDay();
-        const diff = startOfDay.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const monday = new Date(startOfDay.setDate(diff));
-        return { from: monday, to: endOfDay };
-      }
-      case 'month': {
-        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-        return { from: firstDay, to: endOfDay };
-      }
-      case 'previous_month': {
-        const firstDayPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-        const lastDayPrevMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
-        return { from: firstDayPrevMonth, to: lastDayPrevMonth };
-      }
+        return { from: startOfDayAR(), to: endOfDay };
+      case 'week':
+        return { from: startOfWeekAR(), to: endOfDay };
+      case 'month':
+        return { from: startOfMonthAR(), to: endOfDay };
+      case 'previous_month':
+        return { from: startOfPrevMonthAR(), to: endOfPrevMonthAR() };
       case 'custom': {
-        const fromDate = customDateFrom ? new Date(customDateFrom) : startOfDay;
-        let toDate = customDateTo ? new Date(customDateTo) : endOfDay;
-
-        // Si hay fecha final, asegurar que incluya todo el día hasta las 23:59:59
-        if (customDateTo) {
-          toDate = new Date(customDateTo);
-          toDate.setHours(23, 59, 59, 999);
-        }
-
+        const fromDate = parseDateInputAR(customDateFrom) || startOfDayAR();
+        const toDate = parseDateInputAR(customDateTo, true) || endOfDay;
         return { from: fromDate, to: toDate };
       }
       case 'all':
@@ -90,9 +73,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   const loadMonthTransactions = useCallback(async () => {
     if (!shift) return;
 
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const firstDayOfMonth = startOfMonthAR();
+    const endOfDay = endOfDayAR();
 
     const { data } = await supabase
       .from('cash_transactions')
@@ -107,9 +89,8 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
   const loadMonthClosingDifferences = useCallback(async () => {
     if (!shift) return;
 
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const firstDayOfMonth = startOfMonthAR();
+    const endOfDay = endOfDayAR();
 
     const { data: monthShifts } = await supabase
       .from('shifts')

@@ -10,6 +10,7 @@ import {
   Printer,
   Download,
 } from 'lucide-react';
+import { startOfDayAR, startOfWeekAR, startOfMonthAR, startOfPrevMonthAR, endOfPrevMonthAR, parseDateInputAR } from '../lib/argentinaTime';
 
 export default function Reportes() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -49,36 +50,29 @@ export default function Reportes() {
       .order('created_at', { ascending: false });
 
     if (dateFilter === 'today') {
-      const hoursAgo24 = new Date();
-      hoursAgo24.setHours(hoursAgo24.getHours() - 24);
-      const from = hoursAgo24.toISOString();
+      const from = startOfDayAR().toISOString();
       salesQuery = salesQuery.gte('created_at', from);
       cashQuery = cashQuery.gte('created_at', from);
     } else if (dateFilter === 'week') {
-      const daysAgo7 = new Date();
-      daysAgo7.setDate(daysAgo7.getDate() - 7);
-      const from = daysAgo7.toISOString();
+      const from = startOfWeekAR().toISOString();
       salesQuery = salesQuery.gte('created_at', from);
       cashQuery = cashQuery.gte('created_at', from);
     } else if (dateFilter === 'month') {
-      const daysAgo30 = new Date();
-      daysAgo30.setDate(daysAgo30.getDate() - 30);
-      const from = daysAgo30.toISOString();
+      const from = startOfMonthAR().toISOString();
       salesQuery = salesQuery.gte('created_at', from);
       cashQuery = cashQuery.gte('created_at', from);
     } else if (dateFilter === 'lastMonth') {
-      const now = new Date();
-      const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
-      salesQuery = salesQuery.gte('created_at', firstDayLastMonth.toISOString()).lte('created_at', lastDayLastMonth.toISOString());
-      cashQuery = cashQuery.gte('created_at', firstDayLastMonth.toISOString()).lte('created_at', lastDayLastMonth.toISOString());
+      const from = startOfPrevMonthAR().toISOString();
+      const to = endOfPrevMonthAR().toISOString();
+      salesQuery = salesQuery.gte('created_at', from).lte('created_at', to);
+      cashQuery = cashQuery.gte('created_at', from).lte('created_at', to);
     } else if (dateFilter === 'custom' && customDateFrom && customDateTo) {
-      const fromDate = new Date(customDateFrom);
-      fromDate.setHours(0, 0, 0, 0);
-      const toDate = new Date(customDateTo);
-      toDate.setHours(23, 59, 59, 999);
-      salesQuery = salesQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
-      cashQuery = cashQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
+      const fromDate = parseDateInputAR(customDateFrom);
+      const toDate = parseDateInputAR(customDateTo, true);
+      if (fromDate && toDate) {
+        salesQuery = salesQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
+        cashQuery = cashQuery.gte('created_at', fromDate.toISOString()).lte('created_at', toDate.toISOString());
+      }
     }
 
     const [{ data: salesData }, { data: cashData }] = await Promise.all([
