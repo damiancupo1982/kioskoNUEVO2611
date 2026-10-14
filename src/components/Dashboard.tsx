@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag, UserCheck } from 'lucide-react';
+import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag, UserCheck, BookOpen } from 'lucide-react';
 import { Shift, supabase, CashTransaction } from '../lib/supabase';
 import Ventas from './Ventas';
 import Stock from './Stock';
@@ -9,8 +9,9 @@ import Configuracion from './Configuracion';
 import InventoryMovements from './InventoryMovements';
 import Compras from './Compras';
 import Socios from './Socios';
+import CuentaCorriente from './CuentaCorriente';
 
-type View = 'ventas' | 'stock' | 'caja' | 'movimientos' | 'reportes' | 'configuracion' | 'compras' | 'socios';
+type View = 'ventas' | 'stock' | 'caja' | 'cuentacorriente' | 'movimientos' | 'reportes' | 'configuracion' | 'compras' | 'socios';
 
 interface DashboardProps {
   shift: Shift | null;
@@ -204,6 +205,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
     { id: 'movimientos' as View, label: 'Movimientos', icon: TrendingUp, color: 'from-blue-600 to-blue-700' },
     { id: 'compras' as View, label: 'Compras', icon: ShoppingBag, color: 'from-amber-500 to-orange-600' },
     { id: 'caja' as View, label: 'Caja', icon: Wallet, color: 'from-slate-500 to-slate-600' },
+    { id: 'cuentacorriente' as View, label: 'Cta. Corriente', icon: BookOpen, color: 'from-amber-500 to-orange-600' },
     { id: 'reportes' as View, label: 'Reportes', icon: BarChart3, color: 'from-orange-500 to-red-600' },
     { id: 'socios' as View, label: 'Socios', icon: UserCheck, color: 'from-teal-500 to-emerald-600' },
     { id: 'configuracion' as View, label: 'Configuración', icon: Settings, color: 'from-gray-500 to-slate-600' },
@@ -373,6 +375,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 {currentView === 'movimientos' && <InventoryMovements />}
                 {currentView === 'compras' && <Compras />}
                 {currentView === 'caja' && <Caja shift={shift} onCloseShift={onCloseShift} />}
+                {currentView === 'cuentacorriente' && <CuentaCorriente shift={shift} />}
                 {currentView === 'reportes' && <Reportes />}
                 {currentView === 'socios' && <Socios />}
                 {currentView === 'configuracion' && <Configuracion />}

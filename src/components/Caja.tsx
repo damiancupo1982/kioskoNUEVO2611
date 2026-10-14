@@ -427,6 +427,14 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
     .reduce((sum, t) => sum + Number(t.amount), 0);
   const expensasInBox = incomeExpensas - expenseExpensas;
 
+  const incomeCuentaCorrienteVentas = transactions
+    .filter(t => t.type === 'income' && t.payment_method === 'cuenta_corriente')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const incomeCuentaCorrientePagos = transactions
+    .filter(t => t.type === 'income' && t.category === 'cuenta_corriente')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  const cuentaCorrienteNeto = incomeCuentaCorrienteVentas - incomeCuentaCorrientePagos;
+
   // Efectivo esperado para cierre de turno (basado en turno actual)
   const openingCash = Number(shift?.opening_cash || 0);
   const shiftIncomeCash = currentShiftTransactions
@@ -556,7 +564,7 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
       {/* Facturación por método de pago */}
       <div>
         <h3 className="text-lg font-bold text-slate-800 mb-3">FACTURACIÓN - {getPeriodLabel().toUpperCase()}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="bg-white rounded-xl p-4 shadow border border-slate-200">
             <p className="text-sm font-semibold text-slate-600">Efectivo</p>
             <p className="text-2xl font-bold text-emerald-600">${cashInBox.toFixed(2)}</p>
@@ -581,6 +589,11 @@ export default function Caja({ shift, onCloseShift }: CajaProps) {
             <p className="text-sm font-semibold text-slate-600">Expensas</p>
             <p className="text-2xl font-bold text-slate-800">${expensasInBox.toFixed(2)}</p>
             <p className="text-xs text-slate-500 mt-1">Ingresos - egresos por expensas</p>
+          </div>
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 shadow border-2 border-amber-300">
+            <p className="text-sm font-semibold text-amber-700">Cta. Corriente</p>
+            <p className="text-2xl font-bold text-amber-600">${cuentaCorrienteNeto.toFixed(2)}</p>
+            <p className="text-xs text-amber-600 mt-1">Ventas a crédito - pagos recibidos</p>
           </div>
         </div>
       </div>

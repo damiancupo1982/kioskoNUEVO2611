@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase, Product, SaleItem, Shift } from '../lib/supabase';
-import { Search, Minus, Plus, Trash2, ShoppingCart, CreditCard } from 'lucide-react';
+import { supabase, Product, SaleItem, Shift, CustomerAccount } from '../lib/supabase';
+import { Search, Minus, Plus, Trash2, ShoppingCart, CreditCard, AlertCircle } from 'lucide-react';
 
 interface VentasProps {
   shift: Shift | null;
@@ -23,16 +23,20 @@ export default function Ventas({ shift }: VentasProps) {
   const [transferAmount, setTransferAmount] = useState(0);
   const [qrAmount, setQrAmount] = useState(0);
   const [expensasAmount, setExpensasAmount] = useState(0);
+  const [cuentaCorrienteAmount, setCuentaCorrienteAmount] = useState(0);
+  const [oldDebts, setOldDebts] = useState<Array<{ name: string; lot: string; debt: number; days: number }>>([]);
+  const [showOldDebtsModal, setShowOldDebtsModal] = useState(false);
 
   useEffect(() => {
     loadProducts();
+    checkOldDebts();
   }, []);
 
   const total = cart.reduce((sum, i) => sum + i.subtotal, 0);
 
   // Ajuste automático de montos cuando cambia el total
   useEffect(() => {
-    const sum = cashAmount + transferAmount + qrAmount + expensasAmount;
+    const sum = cashAmount + transferAmount + qrAmount + expensasAmount + cuentaCorrienteAmount;
 
     // Si hay total y no se ingresó nada, por defecto todo efectivo
     if (total > 0 && sum === 0) {
@@ -45,6 +49,7 @@ export default function Ventas({ shift }: VentasProps) {
       setTransferAmount(0);
       setQrAmount(0);
       setExpensasAmount(0);
+      setCuentaCorrienteAmount(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
@@ -131,6 +136,7 @@ export default function Ventas({ shift }: VentasProps) {
       { method: 'transferencia', amount: transferAmount },
       { method: 'qr', amount: qrAmount },
       { method: 'expensas', amount: expensasAmount },
+      { method: 'cuenta_corriente', amount: cuentaCorrienteAmount },
     ].filter((p) => p.amount > 0.009);
 
     // Si no se ingresó nada, por defecto todo efectivo
@@ -149,19 +155,24 @@ export default function Ventas({ shift }: VentasProps) {
       );
     }
 
+    // Validación cuenta corriente: nombre y lote obligatorios
+    const hasCuentaCorriente = payments.some((p) => p.method === 'cuenta_corriente');
+    if (hasCuentaCorriente && (!customerName.trim() || !customerLot.trim())) {
+      return alert(
+        'Para ventas en cuenta corriente es obligatorio ingresar el nombre y el número de lote del cliente.'
+      );
+    }
+
     // Si hay algún pago que no sea efectivo, pedir nombre y lote
     const hasNonCash = payments.some((p) => p.method !== 'efectivo');
-    if (hasNonCash && (!customerName.trim() || !customerLot.trim())) {
+    if (hasNonCash && !hasCuentaCorriente && (!customerName.trim() || !customerLot.trim())) {
       return alert(
         'Para pagos que no son en efectivo debés completar el nombre y el lote del cliente.'
       );
     }
 
-    // *** IMPORTANTE ***
-    // payment_method que se guarda en la tabla debe ser UNO de:
-    // 'efectivo', 'transferencia', 'qr', 'expensas'
-    // para no violar posibles constraints del esquema.
-    let storedPaymentMethod = payments[0].method; // por defecto el primero
+    // payment_method: 'cuenta_corriente' si es el único medio; 'efectivo' si hay efectivo
+    let storedPaymentMethod = payments[0].method;
     if (payments.some((p) => p.method === 'efectivo')) {
       storedPaymentMethod = 'efectivo';
     }
@@ -222,8 +233,9 @@ export default function Ventas({ shift }: VentasProps) {
 
     await supabase.from('inventory_movements').insert(inventoryMovements);
 
-    // Movimientos de caja: uno por método
-    const cashRows = payments.map((p) => ({
+    // Movimientos de caja: uno por método que NO sea cuenta corriente
+    const nonCCPayments = payments.filter((p) => p.method !== 'cuenta_corriente');
+    const cashRows = nonCCPayments.map((p) => ({
       shift_id: shift.id,
       type: 'income',
       category: 'venta',
@@ -235,6 +247,19 @@ export default function Ventas({ shift }: VentasProps) {
           : ''
       }`,
     }));
+
+    // Movimiento de caja para cuenta corriente
+    const ccPayment = payments.find((p) => p.method === 'cuenta_corriente');
+    if (ccPayment) {
+      cashRows.push({
+        shift_id: shift.id,
+        type: 'income',
+        category: 'venta',
+        amount: ccPayment.amount,
+        payment_method: 'cuenta_corriente',
+        description: `Venta ${saleData.sale_number} - ${customerName.trim()} (Lote ${customerLot.trim()}) [Cuenta Corriente]`,
+      });
+    }
 
     const { error: cashError } = await supabase
       .from('cash_transactions')
@@ -249,6 +274,66 @@ export default function Ventas({ shift }: VentasProps) {
       alert('Venta completada');
     }
 
+    // Registrar cuenta corriente si corresponde
+    if (ccPayment && saleResult) {
+      const trimmedName = customerName.trim();
+      const trimmedLot = customerLot.trim();
+
+      const { data: existingAccount, error: findError } = await supabase
+        .from('customer_accounts')
+        .select('*')
+        .eq('customer_name', trimmedName)
+        .eq('customer_lot', trimmedLot)
+        .maybeSingle();
+
+      let accountId: string;
+      let currentDebt = 0;
+
+      if (existingAccount) {
+        accountId = (existingAccount as CustomerAccount).id;
+        currentDebt = Number((existingAccount as CustomerAccount).total_debt);
+      } else {
+        const { data: newAccount, error: createError } = await supabase
+          .from('customer_accounts')
+          .insert([{
+            customer_name: trimmedName,
+            customer_lot: trimmedLot,
+            total_debt: 0,
+          }])
+          .select()
+          .single();
+
+        if (createError || !newAccount) {
+          alert('Error al registrar la cuenta corriente.');
+          return;
+        }
+        accountId = (newAccount as CustomerAccount).id;
+      }
+
+      const newDebt = currentDebt + ccPayment.amount;
+
+      await supabase
+        .from('customer_accounts')
+        .update({ total_debt: newDebt, updated_at: new Date().toISOString() })
+        .eq('id', accountId);
+
+      await supabase
+        .from('current_account_transactions')
+        .insert([{
+          customer_account_id: accountId,
+          customer_name: trimmedName,
+          customer_lot: trimmedLot,
+          type: 'cargo',
+          amount: ccPayment.amount,
+          balance_after: newDebt,
+          sale_id: saleResult.id,
+          sale_number: saleData.sale_number,
+          description: `Venta ${saleData.sale_number}`,
+          user_name: shift.user_name,
+          shift_id: shift.id,
+        }]);
+    }
+
     // Limpiar estados
     setCart([]);
     setCustomerName('');
@@ -257,7 +342,54 @@ export default function Ventas({ shift }: VentasProps) {
     setTransferAmount(0);
     setQrAmount(0);
     setExpensasAmount(0);
+    setCuentaCorrienteAmount(0);
     loadProducts();
+
+    // Verificar deudas antiguas después de la venta
+    checkOldDebts();
+  };
+
+  const checkOldDebts = async () => {
+    const { data: accounts } = await supabase
+      .from('customer_accounts')
+      .select('*')
+      .gt('total_debt', 0);
+
+    if (!accounts || accounts.length === 0) return;
+
+    const debts: Array<{ name: string; lot: string; debt: number; days: number }> = [];
+    const now = new Date();
+    const thirtyDaysAgo = 30 * 24 * 60 * 60 * 1000;
+
+    for (const account of accounts as CustomerAccount[]) {
+      const { data: cargos } = await supabase
+        .from('current_account_transactions')
+        .select('*')
+        .eq('customer_account_id', account.id)
+        .eq('type', 'cargo')
+        .order('created_at', { ascending: true })
+        .limit(1);
+
+      if (cargos && cargos.length > 0) {
+        const oldestCargo = cargos[0];
+        const cargoDate = new Date(oldestCargo.created_at);
+        const ageMs = now.getTime() - cargoDate.getTime();
+        if (ageMs > thirtyDaysAgo) {
+          debts.push({
+            name: account.customer_name,
+            lot: account.customer_lot,
+            debt: Number(account.total_debt),
+            days: Math.floor(ageMs / (24 * 60 * 60 * 1000)),
+          });
+        }
+      }
+    }
+
+    if (debts.length > 0) {
+      debts.sort((a, b) => b.days - a.days);
+      setOldDebts(debts);
+      setShowOldDebtsModal(true);
+    }
   };
 
   // Lista de categorías para el filtro (predefinidas + las que existan en productos)
@@ -431,17 +563,21 @@ export default function Ventas({ shift }: VentasProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input
                 type="text"
-                placeholder="Nombre del cliente"
+                placeholder={cuentaCorrienteAmount > 0 ? 'Nombre del cliente (obligatorio)' : 'Nombre del cliente'}
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400"
+                className={`w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400 ${
+                  cuentaCorrienteAmount > 0 && !customerName.trim() ? 'border-red-400 animate-pulse' : 'border-blue-200'
+                }`}
               />
               <input
                 type="text"
-                placeholder="Lote"
+                placeholder={cuentaCorrienteAmount > 0 ? 'Lote (obligatorio)' : 'Lote'}
                 value={customerLot}
                 onChange={(e) => setCustomerLot(e.target.value)}
-                className="w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400"
+                className={`w-full px-3 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 border-2 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-400 ${
+                  cuentaCorrienteAmount > 0 && !customerLot.trim() ? 'border-red-400 animate-pulse' : 'border-blue-200'
+                }`}
               />
             </div>
           </div>
@@ -505,6 +641,21 @@ export default function Ventas({ shift }: VentasProps) {
                   placeholder="0"
                 />
               </div>
+
+              <div className="flex items-center justify-between bg-gradient-to-r from-amber-100 to-orange-100 border-2 border-amber-400 rounded-lg px-3 py-2">
+                <span className="text-sm font-bold text-amber-800">Cuenta Corriente</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={cuentaCorrienteAmount || ''}
+                  onChange={(e) =>
+                    setCuentaCorrienteAmount(parseAmount(e.target.value))
+                  }
+                  className="w-28 px-2 py-1 bg-white border-2 border-amber-400 rounded-lg text-sm text-right font-bold focus:ring-2 focus:ring-amber-400"
+                  placeholder="0"
+                />
+              </div>
             </div>
 
             <div className="flex justify-between items-center text-2xl font-bold bg-gradient-to-r from-yellow-100 to-amber-100 border-2 border-yellow-400 rounded-lg p-3">
@@ -525,6 +676,40 @@ export default function Ventas({ shift }: VentasProps) {
           </div>
         </div>
       </div>
+
+      {/* MODAL DEUDAS ANTIGUAS */}
+      {showOldDebtsModal && oldDebts.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div className="bg-gradient-to-r from-red-500 to-red-700 p-6 text-center">
+              <AlertCircle className="text-white mx-auto mb-2" size={40} />
+              <h2 className="text-xl font-bold text-white">Deudas Antiguas Detectadas</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-700 mb-4 text-center">
+                Los siguientes clientes tienen deuda de mas de 30 dias. Llamar para cobrar.
+              </p>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {oldDebts.map((debt, i) => (
+                  <div key={i} className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    <div>
+                      <p className="font-bold text-sm text-slate-800">{debt.name}</p>
+                      <p className="text-xs text-slate-500">Lote: {debt.lot} - {debt.days} dias</p>
+                    </div>
+                    <span className="font-bold text-red-600">${debt.debt.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setShowOldDebtsModal(false)}
+                className="w-full mt-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all"
+              >
+                Aceptar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

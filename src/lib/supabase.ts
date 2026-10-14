@@ -110,6 +110,32 @@ export interface CarnetPrices {
 export type MemberCategory = 'titular' | 'familiar_1' | 'familiar_2' | 'familiar_3' | 'adherente';
 export type CarnetStatus = 'activo' | 'pausado';
 
+export interface CustomerAccount {
+  id: string;
+  customer_name: string;
+  customer_lot: string;
+  total_debt: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CurrentAccountTransaction {
+  id: string;
+  customer_account_id: string;
+  customer_name: string;
+  customer_lot: string;
+  type: 'cargo' | 'pago';
+  amount: number;
+  balance_after: number;
+  sale_id?: string | null;
+  sale_number?: string | null;
+  payment_method?: string | null;
+  description: string;
+  user_name: string;
+  shift_id?: string | null;
+  created_at: string;
+}
+
 export interface Member {
   id: string;
   lot_number: string;
