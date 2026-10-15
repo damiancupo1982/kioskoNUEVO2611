@@ -37,7 +37,7 @@ export default function LotPersonInput({ value, onChange, label, highlight }: Lo
     setLoading(true);
     const timer = setTimeout(async () => {
       const { data, error } = await supabase
-        .from('socios')
+        .from('members')
         .select('id, first_name, last_name, category, carnet_status')
         .eq('lot_number', lot)
         .order('category');
