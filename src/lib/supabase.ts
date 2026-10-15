@@ -152,3 +152,61 @@ export interface Member {
   updated_at: string;
   neighborhood?: Neighborhood;
 }
+
+export interface CourtPlayer {
+  lot: string;
+  name: string;
+  socio_id: string | null;
+  is_socio: boolean;
+}
+
+export interface CourtReservation {
+  id: string;
+  court: number;
+  reservation_date: string;
+  start_time: string;
+  end_time: string;
+  event_type: 'reserva' | 'clase' | 'torneo' | 'mantenimiento';
+  event_group: string;
+  title: string;
+  professor: string;
+  student: string;
+  titular_lot: string;
+  titular_name: string;
+  notes: string;
+  status: 'reservada' | 'abierta' | 'cerrada' | 'cancelada';
+  session_id: string | null;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CourtSession {
+  id: string;
+  session_number: number;
+  court: number;
+  reservation_id: string | null;
+  status: 'abierta' | 'cerrada' | 'cancelada';
+  opened_at: string;
+  closed_at: string | null;
+  players: CourtPlayer[];
+  titular_name: string;
+  titular_lot: string;
+  titular_socio_id: string | null;
+  total: number;
+  payment_method: string | null;
+  sale_id: string | null;
+  opened_by: string;
+  closed_by: string;
+  guest_charge_manual: boolean;
+}
+
+export interface CourtSessionItem {
+  id: string;
+  session_id: string;
+  product_id: string | null;
+  kind: 'producto' | 'invitado';
+  product_name: string;
+  price: number;
+  quantity: number;
+  created_at: string;
+}

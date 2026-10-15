@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag, UserCheck, BookOpen } from 'lucide-react';
+import { ShoppingCart, Package, Wallet, BarChart3, Settings, Store, TrendingUp, Lightbulb, Users, Trophy, Activity, ShoppingBag, UserCheck, BookOpen, CalendarDays } from 'lucide-react';
 import { Shift, supabase, CashTransaction } from '../lib/supabase';
 import Ventas from './Ventas';
 import Stock from './Stock';
@@ -10,8 +10,9 @@ import InventoryMovements from './InventoryMovements';
 import Compras from './Compras';
 import Socios from './Socios';
 import CuentaCorriente from './CuentaCorriente';
+import Reservas from './reservas/Reservas';
 
-type View = 'ventas' | 'stock' | 'caja' | 'cuentacorriente' | 'movimientos' | 'reportes' | 'configuracion' | 'compras' | 'socios';
+type View = 'ventas' | 'stock' | 'caja' | 'cuentacorriente' | 'movimientos' | 'reportes' | 'configuracion' | 'compras' | 'socios' | 'reservas';
 
 interface DashboardProps {
   shift: Shift | null;
@@ -206,6 +207,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
     { id: 'compras' as View, label: 'Compras', icon: ShoppingBag, color: 'from-amber-500 to-orange-600' },
     { id: 'caja' as View, label: 'Caja', icon: Wallet, color: 'from-slate-500 to-slate-600' },
     { id: 'cuentacorriente' as View, label: 'Cta. Corriente', icon: BookOpen, color: 'from-amber-500 to-orange-600' },
+    { id: 'reservas' as View, label: 'Reservas', icon: CalendarDays, color: 'from-sky-500 to-blue-600' },
     { id: 'reportes' as View, label: 'Reportes', icon: BarChart3, color: 'from-orange-500 to-red-600' },
     { id: 'socios' as View, label: 'Socios', icon: UserCheck, color: 'from-teal-500 to-emerald-600' },
     { id: 'configuracion' as View, label: 'Configuración', icon: Settings, color: 'from-gray-500 to-slate-600' },
@@ -378,6 +380,7 @@ export default function Dashboard({ shift, onCloseShift }: DashboardProps) {
                 {currentView === 'cuentacorriente' && <CuentaCorriente shift={shift} />}
                 {currentView === 'reportes' && <Reportes />}
                 {currentView === 'socios' && <Socios />}
+                {currentView === 'reservas' && <Reservas shift={shift} />}
                 {currentView === 'configuracion' && <Configuracion />}
               </div>
             </div>
